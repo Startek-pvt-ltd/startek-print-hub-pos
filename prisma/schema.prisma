@@ -1,0 +1,203 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  CASHIER
+  DESIGNER
+  PRODUCTION
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum InvoiceStatus {
+  FINALIZED
+  VOID
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+  QR
+}
+
+model User {
+  id           String      @id @default(cuid())
+  name         String
+  email        String      @unique
+  passwordHash String
+  role         Role
+  status       UserStatus  @default(ACTIVE)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  sessions     Session[]
+  auditLogs    AuditLog[]
+  invoicesCreated Invoice[]         @relation("InvoiceCreatedBy")
+  invoicesVoided  Invoice[]         @relation("InvoiceVoidedBy")
+  paymentsRecorded Payment[]        @relation("PaymentRecordedBy")
+  reversalsRecorded PaymentReversal[] @relation("ReversalRecordedBy")
+
+  @@index([status])
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Setting {
+  id                String   @id @default("primary")
+  businessName      String   @default("Startek Print Hub")
+  address           String   @default("No.62 Padukka Road, Meegoda")
+  phonePrimary      String   @default("0705935320")
+  phoneSecond       String   @default("0777250493")
+  email             String   @default("startekprinthub@gmail.com")
+  currencyCode      String   @default("LKR")
+  displayCurrency   String   @default("Rs.")
+  timeZone          String   @default("Asia/Colombo")
+  receiptWidth      String   @default("80mm")
+  printerModel      String   @default("Xprinter XP-80T")
+  printerConnection String   @default("USB")
+  receiptFooter     String   @default("Design & Deploy by Startek (PVT) LTD")
+  invoicePrefix     String   @default("SPH-INV")
+  orderPrefix       String   @default("SPH-ORD")
+  quotePrefix       String   @default("SPH-QT")
+  expensePrefix     String   @default("SPH-EXP")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model NumberCounter {
+  key       String   @id
+  nextValue BigInt   @default(1)
+  updatedAt DateTime @updatedAt
+
+  @@map("number_counters")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  entityType String?
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+model Customer {
+  id          String    @id @default(cuid())
+  name        String
+  phoneNumber String    @unique
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  invoices    Invoice[]
+
+  @@map("customers")
+}
+
+model Invoice {
+  id                    String        @id @default(cuid())
+  invoiceNumber         String        @unique
+  idempotencyKey        String        @unique
+  customerId            String?
+  customerNameSnapshot  String?
+  customerPhoneSnapshot String?
+  subtotal              Decimal       @db.Decimal(18, 2)
+  discount              Decimal       @default(0) @db.Decimal(18, 2)
+  grandTotal            Decimal       @db.Decimal(18, 2)
+  status                InvoiceStatus @default(FINALIZED)
+  createdById           String
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  voidedAt              DateTime?
+  voidedById            String?
+  voidReason            String?
+  customer              Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  createdBy             User          @relation("InvoiceCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  voidedBy              User?         @relation("InvoiceVoidedBy", fields: [voidedById], references: [id], onDelete: Restrict)
+  items                 InvoiceItem[]
+  payments              Payment[]
+
+  @@index([customerId])
+  @@index([createdAt])
+  @@index([status, createdAt])
+  @@index([customerNameSnapshot])
+  @@index([customerPhoneSnapshot])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  description String
+  quantity    Decimal  @db.Decimal(18, 3)
+  unitPrice   Decimal  @db.Decimal(18, 2)
+  lineTotal   Decimal  @db.Decimal(18, 2)
+  sortOrder   Int
+  createdAt   DateTime @default(now())
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+
+  @@unique([invoiceId, sortOrder])
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+model Payment {
+  id           String           @id @default(cuid())
+  invoiceId    String
+  amount       Decimal          @db.Decimal(18, 2)
+  method       PaymentMethod
+  reference    String?
+  recordedById String
+  createdAt    DateTime         @default(now())
+  invoice      Invoice          @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  recordedBy   User             @relation("PaymentRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
+  reversal     PaymentReversal?
+
+  @@index([invoiceId, createdAt])
+  @@index([method, createdAt])
+  @@map("payments")
+}
+
+model PaymentReversal {
+  id           String   @id @default(cuid())
+  paymentId    String   @unique
+  reason       String
+  reversedById String
+  createdAt    DateTime @default(now())
+  payment      Payment  @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  reversedBy   User     @relation("ReversalRecordedBy", fields: [reversedById], references: [id], onDelete: Restrict)
+
+  @@index([reversedById, createdAt])
+  @@map("payment_reversals")
+}

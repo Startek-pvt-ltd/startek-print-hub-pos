@@ -1,0 +1,1 @@
+export default function Loading() { return <div className="grid min-h-screen place-items-center bg-slate-50"><div className="size-12 animate-spin rounded-full border-4 border-slate-200 border-t-blue-700" aria-label="Loading" /></div>; }
