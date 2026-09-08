@@ -1,4 +1,15 @@
-# Receipt Printing
+# Printing
+
+## A4 quotations
+
+Quotation print views are formatted for A4 portrait paper and include the Startek Print Hub logo, business contact details, customer snapshot, manual line items, totals, validity, and notes. The quotation screen provides two outputs:
+
+- **Print A4 quotation** opens the operating system print dialog. Select the Canon G3010, A4 paper, portrait orientation, and 100% scale. Browser security requires the user to confirm the printer and settings.
+- **Download PDF** creates the same persisted quotation as an A4 PDF on the server and downloads it to the current device. The protected endpoint requires quotation-management permission and does not accept browser-supplied totals.
+
+Long quotations repeat the table header and paginate without splitting a line item. The PDF includes page numbers and the same approved logo stored at `public/brand/startek-logo.png`.
+
+## Receipt printing
 
 ## Production architecture
 

@@ -63,7 +63,7 @@ Staff roles are ADMIN, MANAGER, CASHIER, DESIGNER, and PRODUCTION. All authoriza
 
 ## Phase 4 quotations and print orders acceptance
 
-- Quotations use manual immutable item snapshots, server-calculated totals, `SPH-QT` atomic numbering, draft-only edits, A4 print presentation, lifecycle histories, and audits.
+- Quotations use manual immutable item snapshots, server-calculated totals, `SPH-QT` atomic numbering, draft-only edits, branded A4 print and PDF download presentations, lifecycle histories, and audits.
 - Only accepted, non-expired quotations convert. One serializable transaction creates the `SPH-ORD` order and its items/history, links it, marks the quotation CONVERTED, and writes audits. Database uniqueness rejects duplicates.
 - Orders preserve print-job fields, active-user assignment, due dates, and the exact controlled workflow. Definitive role/transition checks run in server domain code, including for direct Server Action calls.
 - An Order can have at most one Invoice. The bridge reuses Phase 3 server calculations, invoice numbering, customer/item snapshots, payments, balances, and audit logging; Orders contain no parallel financial ledger.
