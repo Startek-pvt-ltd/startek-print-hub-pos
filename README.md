@@ -2,7 +2,7 @@
 
 Production-oriented, touch-first Point of Sale and print-job operations system for Startek Print Hub. The application uses Next.js App Router, TypeScript, Tailwind CSS, shadcn-style owned UI components, Prisma ORM, and PostgreSQL hosted on Supabase.
 
-Phase 3 adds production POS billing: optional customers, manually entered invoice items, transactionally allocated invoice numbers, append-only payments and reversals, balance payments, invoice history/detail, controlled voiding, and browser receipt/reprint preparation. Quotations, orders, expenses, cash register, reports, and QZ Tray remain deferred.
+Phase 4 adds quotations and print orders on top of the accepted Phase 3 billing foundation. Staff can create and print manual quotations, record their lifecycle, atomically convert accepted quotations to print orders, move orders through the controlled production workflow, assign staff, and create one linked invoice using the existing payment ledger. Expenses, cash register, reports, QZ Tray, and physical printer integration remain deferred.
 
 ## Non-negotiable domain rule
 
@@ -33,11 +33,11 @@ pnpm db:validate
 pnpm build
 ```
 
-Database-backed Phase 3 verification uses ignored `.env`, which is loaded by both Next.js and the Prisma/seed commands. Set `DATABASE_ENVIRONMENT=development`, transaction-pooler `DATABASE_URL` (6543), and session-pooler `DIRECT_URL` (5432) for the same approved Supabase development project. Apply existing reviewed migrations with `pnpm exec prisma migrate deploy`; `pnpm db:migrate` is for authoring new development migrations.
+Database-backed Phase 3–4 verification uses ignored `.env`, which is loaded by both Next.js and the Prisma/seed commands. Set `DATABASE_ENVIRONMENT=development`, transaction-pooler `DATABASE_URL` (6543), and session-pooler `DIRECT_URL` (5432) for the same approved Supabase development project. Apply existing reviewed migrations with `pnpm exec prisma migrate deploy`; `pnpm db:migrate` is for authoring new development migrations.
 
 For local TLS verification, download the CA certificate from the project's Database Settings → SSL configuration into ignored `.env.supabase-ca.crt`. Before launching Node-based database commands or the application, export `NODE_EXTRA_CA_CERTS="$PWD/.env.supabase-ca.crt"` in that terminal. This trusts the provider certificate while retaining certificate and hostname verification. Do not disable certificate validation.
 
-Run `pnpm test:integration` explicitly for the development PostgreSQL suite. It checks the approved development project identity before connecting, exercises actual invoice/payment services and SQL constraints, and retains financial test fixtures. Constraint probes roll back. Normal `pnpm test` remains database-independent. Authenticated browser acceptance is a separate required gate before a release checkpoint.
+Run `pnpm test:integration` explicitly for the development PostgreSQL suite. It checks the approved development project identity before connecting, exercises actual quotation/conversion/order/invoice/payment services and SQL constraints, and retains business-history fixtures. Constraint probes roll back. Normal `pnpm test` remains database-independent. Authenticated browser acceptance is a separate required gate before a release checkpoint.
 
 Phase 3 authenticated browser acceptance was exercised against DEVELOPMENT Supabase PostgreSQL on 8 September 2026. The repeatable workflow and history-filter reset regression are recorded in `tests/browser/phase3-acceptance.md`. This does not certify production deployment or physical printer operation.
 

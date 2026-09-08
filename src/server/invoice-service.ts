@@ -24,12 +24,15 @@ const invoiceInclude = {
     orderBy: { createdAt: "asc" as const },
     include: { recordedBy: { select: { name: true } }, reversal: true },
   },
+  order: { select: { id: true, orderNumber: true } },
 } satisfies Prisma.InvoiceInclude;
 
 export async function createInvoice(input: InvoiceInput, actorId: string) {
-  const { totals, snapshot, initialPayment } = prepareInvoicePlan(input);
+  return db.$transaction((tx) => createInvoiceInTransaction(tx, input, actorId), { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
 
-  return db.$transaction(async (tx) => {
+export async function createInvoiceInTransaction(tx: Prisma.TransactionClient, input: InvoiceInput, actorId: string, orderId?: string) {
+  const { totals, snapshot, initialPayment } = prepareInvoicePlan(input);
     const duplicate = await tx.invoice.findUnique({ where: { idempotencyKey: input.idempotencyKey }, include: invoiceInclude });
     if (duplicate) {
       if (duplicate.createdById !== actorId) throw new InvoiceOperationError("DUPLICATE_SUBMISSION", "This submission key is already in use");
@@ -70,6 +73,7 @@ export async function createInvoice(input: InvoiceInput, actorId: string) {
         discount: totals.discount.toFixed(2),
         grandTotal: totals.grandTotal.toFixed(2),
         createdById: actorId,
+        orderId,
         items: { create: input.items.map((item, index) => ({ description: item.description, quantity: item.quantity, unitPrice: item.unitPrice, lineTotal: totals.lineTotals[index].toFixed(2), sortOrder: index })) },
         payments: initialPayment && input.initialPayment ? { create: { amount: initialPayment.toFixed(2), method: input.initialPayment.method, reference: input.initialPayment.reference || null, recordedById: actorId } } : undefined,
       },
@@ -86,7 +90,6 @@ export async function createInvoice(input: InvoiceInput, actorId: string) {
       await tx.auditLog.create({ data: { userId: actorId, action: "PAYMENT_RECORDED", entityType: "Payment", entityId: invoice.payments[0].id, metadata: { invoiceId: invoice.id, invoiceNumber, amount: initialPayment.toFixed(2), method: invoice.payments[0].method } } });
     }
     return summarizeInvoice(invoice);
-  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 
 export async function addInvoicePayment(input: BalancePaymentInput, actorId: string) {

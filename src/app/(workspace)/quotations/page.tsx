@@ -1,2 +1,18 @@
-import { PhasePlaceholder } from "@/components/phase-placeholder";
-export default function Page() { return <PhasePlaceholder title="Quotations" phase="Phase 3" description="Prepare customer quotations and convert accepted work without retyping transaction details." />; }
+import Link from "next/link";
+import { Plus } from "lucide-react";
+import type { Prisma, QuotationStatus } from "@/generated/prisma/client";
+import { requirePermission } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { PageHeading } from "@/components/page-heading";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { StatusBadge } from "@/components/status-badge";
+const statuses = ["DRAFT", "ISSUED", "ACCEPTED", "REJECTED", "EXPIRED", "CONVERTED"] as const;
+export default async function QuotationList({ searchParams }: { searchParams: Promise<{ q?: string; status?: string; from?: string; to?: string }> }) {
+  await requirePermission("quotations:manage"); const f = await searchParams; const where: Prisma.QuotationWhereInput = { status: statuses.includes(f.status as QuotationStatus) ? f.status as QuotationStatus : undefined, createdAt: f.from || f.to ? { gte: day(f.from, false), lte: day(f.to, true) } : undefined, OR: f.q ? [{ quotationNumber: { contains: f.q, mode: "insensitive" } }, { customerNameSnapshot: { contains: f.q, mode: "insensitive" } }, { customerPhoneSnapshot: { contains: f.q } }] : undefined };
+  const rows = await db.quotation.findMany({ where, include: { createdBy: { select: { name: true } }, order: { select: { id: true, orderNumber: true } } }, orderBy: { createdAt: "desc" }, take: 100 });
+  return <><PageHeading eyebrow="Sales" title="Quotations" description="Issue manual quotations and convert accepted work without retyping." action={<Button asChild><Link href="/quotations/new"><Plus className="size-5" /> New quotation</Link></Button>} /><Card className="p-5"><form className="grid gap-3 md:grid-cols-[1fr_180px_160px_160px_auto]"><Input name="q" defaultValue={f.q} placeholder="Number, customer, or phone" /><select name="status" defaultValue={f.status ?? "ALL"} className="min-h-12 rounded-xl border border-slate-300 bg-white px-4"><option value="ALL">All statuses</option>{statuses.map((s) => <option key={s}>{s}</option>)}</select><Input name="from" type="date" defaultValue={f.from} /><Input name="to" type="date" defaultValue={f.to} /><Button>Filter</Button></form></Card><Card className="mt-5 overflow-hidden"><div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left"><thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{["Quotation", "Created", "Customer", "Phone", "Total", "Status", "Valid until", "Order", "Creator"].map((h) => <th className="px-5 py-4" key={h}>{h}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{rows.map((q) => <tr key={q.id}><td className="px-5 py-4 font-black text-blue-700"><Link href={`/quotations/${q.id}`}>{q.quotationNumber}</Link></td><td className="px-5 py-4">{fmt(q.createdAt)}</td><td className="px-5 py-4 font-bold">{q.customerNameSnapshot}</td><td className="px-5 py-4">{q.customerPhoneSnapshot}</td><td className="px-5 py-4 font-bold">Rs. {q.grandTotal.toFixed(2)}</td><td className="px-5 py-4"><StatusBadge status={q.status} /></td><td className="px-5 py-4">{q.validUntil?.toISOString().slice(0,10) ?? "—"}</td><td className="px-5 py-4">{q.order ? <Link className="text-blue-700" href={`/orders/${q.order.id}`}>{q.order.orderNumber}</Link> : "—"}</td><td className="px-5 py-4">{q.createdBy.name}</td></tr>)}</tbody></table></div>{!rows.length ? <p className="p-12 text-center text-slate-500">No quotations found.</p> : null}</Card></>;
+}
+function fmt(d: Date) { return new Intl.DateTimeFormat("en-LK", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Colombo" }).format(d); }
+function day(v: string | undefined, end: boolean) { if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return undefined; return new Date(`${v}T${end ? "23:59:59.999" : "00:00:00"}+05:30`); }

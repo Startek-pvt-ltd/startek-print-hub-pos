@@ -45,3 +45,9 @@ UI navigation is filtered for usability, while `requireUser`, `requireRole`, and
 ## Failure behavior
 
 Validation errors are returned beside forms. Unexpected route failures render a user-safe error page without leaking credentials. Database operations that must remain consistent are transactional. Logs and audits must avoid passwords, session tokens, database URLs, and arbitrary raw print commands.
+
+### Phase 4 quotation and order services
+
+Quotation calculations reuse the tested decimal financial domain. `quotation-service` owns customer snapshots, atomic numbering, draft editing, lifecycle history, and the accepted-quotation conversion transaction. `order-service` owns the canonical role-aware production transition policy, assignment, print-job metadata, and the one-order/one-invoice bridge. The bridge calls the existing invoice transaction helper; Orders never duplicate invoice payment or balance truth.
+
+App Router pages remain server-first. Small client components handle editable rows, confirmations, pending states, and Server Action calls. Every Phase 4 Server Action authenticates and authorizes again before calling a domain service.

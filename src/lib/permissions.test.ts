@@ -35,4 +35,13 @@ describe("role permissions", () => {
     expect(hasPermission("DESIGNER", "invoices:view")).toBe(false);
     expect(hasPermission("PRODUCTION", "invoices:view")).toBe(false);
   });
+
+  it("centralizes Phase 4 financial and operational boundaries", () => {
+    expect(hasPermission("CASHIER", "quotations:convert")).toBe(true);
+    expect(hasPermission("CASHIER", "orders:create-invoice")).toBe(true);
+    expect(hasPermission("CASHIER", "orders:assign")).toBe(false);
+    expect(hasPermission("DESIGNER", "orders:create-invoice")).toBe(false);
+    expect(hasPermission("PRODUCTION", "quotations:manage")).toBe(false);
+    expect(hasPermission("MANAGER", "orders:cancel")).toBe(true);
+  });
 });

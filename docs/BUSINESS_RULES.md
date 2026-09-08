@@ -37,6 +37,16 @@ Order statuses are PENDING, DESIGNING, WAITING_APPROVAL, APPROVED, PRINTING, FIN
 
 Quotation conversion copies the customer and manual item snapshots inside one transaction and marks the quotation Converted. Retyping is not required and conversion cannot occur twice.
 
+### Phase 4 quotation lifecycle
+
+Quotation statuses are DRAFT, ISSUED, ACCEPTED, REJECTED, EXPIRED, and CONVERTED. Only DRAFT is editable. DRAFT may be issued; ISSUED may be accepted, rejected, or recorded expired; only ACCEPTED may be converted. Rejected, expired, and converted quotations are terminal. Expiry can only be recorded after `validUntil`. Every change appends status history and an audit event.
+
+### Phase 4 order workflow and roles
+
+The normal sequence is PENDING → DESIGNING → WAITING_APPROVAL → APPROVED → PRINTING → FINISHING → READY → DELIVERED. ADMIN and MANAGER may perform normal steps; DESIGNER owns the two design steps; ADMIN/MANAGER/CASHIER approve and deliver; PRODUCTION owns printing through ready. Only ADMIN/MANAGER may cancel. DELIVERED and CANCELLED are terminal.
+
+Assignments reference active User records and are audited. Due-state presentation compares stored calendar dates with the Asia/Colombo shop date; terminal orders are never overdue. Order financial display comes from its quotation until invoiced and solely from the linked Invoice thereafter. Creating that invoice copies snapshots through the Phase 3 calculation service and permits an optional cash advance; later payments remain separate ledger records.
+
 ## Cash register
 
 Expected cash equals opening cash plus eligible cash receipts minus cash expenses minus approved cash withdrawals, plus approved cash deposits. Card, bank-transfer, and QR payments never affect drawer cash. Closing records actual cash and difference as actual minus expected. An ordinary user cannot edit a closed session.

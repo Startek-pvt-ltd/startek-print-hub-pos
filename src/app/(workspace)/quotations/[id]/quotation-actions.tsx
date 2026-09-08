@@ -1,0 +1,13 @@
+"use client";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import type { QuotationStatus } from "@/generated/prisma/client";
+import { convertQuotationAction, setQuotationStatus } from "@/app/(workspace)/phase4-actions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+export function QuotationActions({ id, status, staff }: { id: string; status: QuotationStatus; staff: { id: string; name: string; role: string }[] }) {
+  const router = useRouter(); const [pending, start] = useTransition(); const [message, setMessage] = useState("");
+  function change(next: "ISSUED"|"ACCEPTED"|"REJECTED"|"EXPIRED") { if ((next === "REJECTED" || next === "EXPIRED") && !confirm(`Mark this quotation ${next.toLowerCase()}?`)) return; start(async () => { const r = await setQuotationStatus({ quotationId: id, status: next, note: null }); setMessage(r.error ?? "Status updated"); router.refresh(); }); }
+  function convert(form: FormData) { if (!confirm("Convert this accepted quotation to one print order?")) return; start(async () => { const r = await convertQuotationAction({ quotationId: id, jobName: form.get("jobName"), dueDate: form.get("dueDate"), assignedStaffId: form.get("assignedStaffId"), notes: form.get("notes") }); if (r.error) setMessage(r.error); else router.push(`/orders/${r.data?.id}`); }); }
+  return <div className="space-y-4">{status === "DRAFT" ? <Button disabled={pending} onClick={() => change("ISSUED")}>Issue quotation</Button> : null}{status === "ISSUED" ? <div className="flex flex-wrap gap-3"><Button disabled={pending} onClick={() => change("ACCEPTED")}>Mark accepted</Button><Button variant="danger" disabled={pending} onClick={() => change("REJECTED")}>Mark rejected</Button><Button variant="secondary" disabled={pending} onClick={() => change("EXPIRED")}>Mark expired</Button></div> : null}{status === "ACCEPTED" ? <form action={convert} className="grid gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-5 md:grid-cols-2"><h3 className="font-black md:col-span-2">Convert to print order</h3><Input name="jobName" placeholder="Job name (optional)" /><Input name="dueDate" type="date" /><select name="assignedStaffId" className="min-h-12 rounded-xl border border-slate-300 bg-white px-4"><option value="">Unassigned</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.role}</option>)}</select><Input name="notes" placeholder="Order notes (optional)" /><Button className="md:col-span-2" disabled={pending}>Convert quotation</Button></form> : null}{message ? <p role="status" className="rounded-xl bg-slate-100 p-4 font-bold">{message}</p> : null}</div>;
+}

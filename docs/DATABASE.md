@@ -39,7 +39,15 @@ Development PostgreSQL acceptance on 8 September 2026 exposed a nullable void-re
 - Foreign keys use restrictive deletion for financial history. Customer deletion can null the relation because snapshots preserve the original identity.
 - PostgreSQL checks reject invalid financial values, blank item descriptions, blank reversal reasons, and incomplete void state.
 
-Quotations, orders, expenses, expense categories, cash sessions, and cash movements remain planned for later phases.
+Expenses, expense categories, cash sessions, and cash movements remain planned for later phases.
+
+## Phase 4 quotations and print orders
+
+Migration `prisma/migrations/202609080002_phase4_quotations_orders/migration.sql` adds quotation/order enums and the `quotations`, `quotation_items`, `quotation_status_history`, `orders`, `order_items`, and `order_status_history` tables. It adds nullable unique `invoices.orderId` for the explicit one-to-one invoice bridge.
+
+Quotation and Order customer values are immutable name/phone snapshots with an optional link to the reusable Customer record. Manual items carry description, quantity, unit price, line total, and stable sort order; Order items additionally carry optional size, material, finishing, design instructions, and notes. No catalog or inventory identity exists.
+
+Unique constraints protect quotation numbers, order numbers, quotation idempotency keys, one order per quotation, and one invoice per order. PostgreSQL checks reject invalid snapshots and manual values and ensure conversion metadata matches CONVERTED status. Historical and source relations use restrictive deletes. Number counters `quote` and `order` are allocated inside the same serializable transaction as their records.
 
 There will be no `products`, `skus`, barcode catalog, stock-item selector, or product lookup relation. Transaction item tables store manual snapshots.
 

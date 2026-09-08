@@ -32,21 +32,48 @@ enum PaymentMethod {
   QR
 }
 
+enum QuotationStatus {
+  DRAFT
+  ISSUED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CONVERTED
+}
+
+enum OrderStatus {
+  PENDING
+  DESIGNING
+  WAITING_APPROVAL
+  APPROVED
+  PRINTING
+  FINISHING
+  READY
+  DELIVERED
+  CANCELLED
+}
+
 model User {
-  id           String      @id @default(cuid())
-  name         String
-  email        String      @unique
-  passwordHash String
-  role         Role
-  status       UserStatus  @default(ACTIVE)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  sessions     Session[]
-  auditLogs    AuditLog[]
-  invoicesCreated Invoice[]         @relation("InvoiceCreatedBy")
-  invoicesVoided  Invoice[]         @relation("InvoiceVoidedBy")
-  paymentsRecorded Payment[]        @relation("PaymentRecordedBy")
-  reversalsRecorded PaymentReversal[] @relation("ReversalRecordedBy")
+  id                     String                   @id @default(cuid())
+  name                   String
+  email                  String                   @unique
+  passwordHash           String
+  role                   Role
+  status                 UserStatus               @default(ACTIVE)
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  sessions               Session[]
+  auditLogs              AuditLog[]
+  invoicesCreated        Invoice[]                @relation("InvoiceCreatedBy")
+  invoicesVoided         Invoice[]                @relation("InvoiceVoidedBy")
+  paymentsRecorded       Payment[]                @relation("PaymentRecordedBy")
+  reversalsRecorded      PaymentReversal[]        @relation("ReversalRecordedBy")
+  quotationsCreated      Quotation[]              @relation("QuotationCreatedBy")
+  quotationsConverted    Quotation[]              @relation("QuotationConvertedBy")
+  quotationStatusChanges QuotationStatusHistory[]
+  ordersCreated          Order[]                  @relation("OrderCreatedBy")
+  ordersAssigned         Order[]                  @relation("OrderAssignedTo")
+  orderStatusChanges     OrderStatusHistory[]
 
   @@index([status])
   @@map("users")
@@ -115,12 +142,14 @@ model AuditLog {
 }
 
 model Customer {
-  id          String    @id @default(cuid())
+  id          String      @id @default(cuid())
   name        String
-  phoneNumber String    @unique
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  phoneNumber String      @unique
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
   invoices    Invoice[]
+  quotations  Quotation[]
+  orders      Order[]
 
   @@map("customers")
 }
@@ -142,11 +171,13 @@ model Invoice {
   voidedAt              DateTime?
   voidedById            String?
   voidReason            String?
+  orderId               String?       @unique
   customer              Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
   createdBy             User          @relation("InvoiceCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
   voidedBy              User?         @relation("InvoiceVoidedBy", fields: [voidedById], references: [id], onDelete: Restrict)
   items                 InvoiceItem[]
   payments              Payment[]
+  order                 Order?        @relation(fields: [orderId], references: [id], onDelete: Restrict)
 
   @@index([customerId])
   @@index([createdAt])
@@ -154,6 +185,136 @@ model Invoice {
   @@index([customerNameSnapshot])
   @@index([customerPhoneSnapshot])
   @@map("invoices")
+}
+
+model Quotation {
+  id                    String                   @id @default(cuid())
+  quotationNumber       String                   @unique
+  idempotencyKey        String                   @unique
+  customerId            String?
+  customerNameSnapshot  String
+  customerPhoneSnapshot String
+  subtotal              Decimal                  @db.Decimal(18, 2)
+  discount              Decimal                  @default(0) @db.Decimal(18, 2)
+  grandTotal            Decimal                  @db.Decimal(18, 2)
+  status                QuotationStatus          @default(DRAFT)
+  notes                 String?
+  validUntil            DateTime?                @db.Date
+  createdById           String
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  convertedAt           DateTime?
+  convertedById         String?
+  customer              Customer?                @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  createdBy             User                     @relation("QuotationCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  convertedBy           User?                    @relation("QuotationConvertedBy", fields: [convertedById], references: [id], onDelete: Restrict)
+  items                 QuotationItem[]
+  statusHistory         QuotationStatusHistory[]
+  order                 Order?
+
+  @@index([customerId])
+  @@index([status, createdAt])
+  @@index([customerNameSnapshot])
+  @@index([customerPhoneSnapshot])
+  @@map("quotations")
+}
+
+model QuotationItem {
+  id          String    @id @default(cuid())
+  quotationId String
+  description String
+  quantity    Decimal   @db.Decimal(18, 3)
+  unitPrice   Decimal   @db.Decimal(18, 2)
+  lineTotal   Decimal   @db.Decimal(18, 2)
+  sortOrder   Int
+  createdAt   DateTime  @default(now())
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Restrict)
+
+  @@unique([quotationId, sortOrder])
+  @@index([quotationId])
+  @@map("quotation_items")
+}
+
+model QuotationStatusHistory {
+  id             String           @id @default(cuid())
+  quotationId    String
+  previousStatus QuotationStatus?
+  newStatus      QuotationStatus
+  note           String?
+  changedById    String
+  createdAt      DateTime         @default(now())
+  quotation      Quotation        @relation(fields: [quotationId], references: [id], onDelete: Restrict)
+  changedBy      User             @relation(fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([quotationId, createdAt])
+  @@map("quotation_status_history")
+}
+
+model Order {
+  id                    String               @id @default(cuid())
+  orderNumber           String               @unique
+  quotationId           String?              @unique
+  customerId            String?
+  customerNameSnapshot  String
+  customerPhoneSnapshot String
+  status                OrderStatus          @default(PENDING)
+  jobName               String?
+  dueDate               DateTime?            @db.Date
+  assignedStaffId       String?
+  notes                 String?
+  createdById           String
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  quotation             Quotation?           @relation(fields: [quotationId], references: [id], onDelete: Restrict)
+  customer              Customer?            @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  assignedStaff         User?                @relation("OrderAssignedTo", fields: [assignedStaffId], references: [id], onDelete: SetNull)
+  createdBy             User                 @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  items                 OrderItem[]
+  statusHistory         OrderStatusHistory[]
+  invoice               Invoice?
+
+  @@index([customerId])
+  @@index([status, dueDate])
+  @@index([assignedStaffId, status])
+  @@index([customerNameSnapshot])
+  @@index([customerPhoneSnapshot])
+  @@map("orders")
+}
+
+model OrderItem {
+  id                 String   @id @default(cuid())
+  orderId            String
+  description        String
+  quantity           Decimal  @db.Decimal(18, 3)
+  unitPrice          Decimal  @db.Decimal(18, 2)
+  lineTotal          Decimal  @db.Decimal(18, 2)
+  size               String?
+  material           String?
+  finishing          String?
+  designInstructions String?
+  additionalNotes    String?
+  sortOrder          Int
+  createdAt          DateTime @default(now())
+  order              Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@unique([orderId, sortOrder])
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id             String       @id @default(cuid())
+  orderId        String
+  previousStatus OrderStatus?
+  newStatus      OrderStatus
+  note           String?
+  changedById    String
+  createdAt      DateTime     @default(now())
+  order          Order        @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  changedBy      User         @relation(fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([orderId, createdAt])
+  @@map("order_status_history")
 }
 
 model InvoiceItem {
