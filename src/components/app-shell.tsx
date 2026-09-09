@@ -23,20 +23,20 @@ const navigation: Array<{ label: string; href: string; icon: typeof LayoutDashbo
 export function AppShell({ children, user }: { children: React.ReactNode; user: { name: string; role: Role } }) {
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[270px_1fr]">
-      <aside className="border-b border-blue-900 bg-[#061b3e] text-white print:hidden lg:sticky lg:top-0 lg:h-screen lg:border-b-0 lg:border-r">
+      <aside className="border-b border-blue-900 bg-[#061b3e] text-white print:hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:border-b-0 lg:border-r">
         <div className="flex min-h-20 items-center justify-between px-5 lg:min-h-24 lg:justify-start lg:gap-3">
           <Image src="/brand/startek-logo.png" alt="Startek Print Hub" width={52} height={52} className="rounded-xl object-cover" />
           <div><p className="font-black tracking-wide">STARTEK</p><p className="text-xs tracking-[.22em] text-sky-300">PRINT HUB POS</p></div>
           <span className="rounded-full bg-blue-800 px-3 py-1 text-xs font-bold lg:hidden">{user.role}</span>
         </div>
-        <nav className="flex gap-2 overflow-x-auto px-4 pb-4 lg:block lg:space-y-1 lg:overflow-visible lg:pb-0" aria-label="Primary navigation">
+        <nav className="flex gap-2 overflow-x-auto px-4 pb-4 lg:block lg:min-h-0 lg:flex-1 lg:space-y-1 lg:overflow-y-auto lg:pb-4" aria-label="Primary navigation">
           {navigation.filter((item) => hasPermission(user.role, item.permission)).map((item) => (
             <Link key={item.href} href={item.href} className="flex min-h-12 shrink-0 items-center gap-3 rounded-xl px-4 text-sm font-bold text-blue-100 transition hover:bg-white/10 hover:text-white">
               <item.icon className="size-5 text-sky-300" /> {item.label}
             </Link>
           ))}
         </nav>
-        <div className="hidden border-t border-white/10 p-4 lg:absolute lg:inset-x-0 lg:bottom-0 lg:block">
+        <div className="hidden shrink-0 border-t border-white/10 p-4 lg:block">
           <div className="mb-3 flex items-center gap-3 px-2"><div className="grid size-10 place-items-center rounded-full bg-sky-400 font-black text-blue-950">{user.name.charAt(0)}</div><div className="min-w-0"><p className="truncate text-sm font-bold">{user.name}</p><p className="text-xs text-blue-300">{user.role}</p></div></div>
           <form action={logout}><Button variant="ghost" className="w-full justify-start text-blue-100 hover:bg-white/10 hover:text-white"><LogOut className="size-5" /> Sign out</Button></form>
         </div>

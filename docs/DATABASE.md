@@ -70,6 +70,10 @@ Migration `prisma/migrations/20260908165355_phase5_expenses_cash_register/migrat
 
 Session membership is explicit: new CASH payments and cash expenses reference the active session at creation. Non-cash payments/expenses do not. Historical Phase 3 cash payments have a null session and are not retroactively assigned.
 
+## Phase 6 reporting data access
+
+Phase 6 introduces no tables, aggregate columns, or migration. Values are calculated from existing transactional rows. Existing date/status, method/date, staff/date, and order status/due indexes cover current report patterns at normal shop volume. Additional indexes should be driven by production query evidence rather than speculative cached totals.
+
 ## Migration workflow
 
 Create and test migrations against development first. Review generated SQL, apply to staging, verify data and constraints, then deploy application code and production migration in the documented order. Never use schema push against production and never edit a migration already applied to a shared environment.

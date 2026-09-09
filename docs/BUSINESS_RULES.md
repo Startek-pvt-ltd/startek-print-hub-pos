@@ -60,3 +60,13 @@ Expenses are finalized immediately and their number, date, category, description
 ## Time, identity, and audit
 
 All important mutations resolve their actor from the server session. Dates use the shop timezone for business-day grouping. Audit metadata records enough before/after or financial context to explain an action without storing secrets. Important financial/audit history is retained, not physically deleted.
+
+## Dashboard and reporting
+
+- Sales are valid non-VOID finalized invoice grand totals; they are not cash received.
+- Payments received are valid, non-reversed Payment ledger entries. Outstanding is each valid invoice grand total less those entries, floored at zero.
+- Expenses are finalized non-VOID Expense rows across every payment method.
+- Operational net income is Sales minus Expenses. V1 has no COGS allocation, so this is neither gross profit nor a full accounting net-profit statement.
+- Inclusive filters use `Asia/Colombo` calendar boundaries while timestamps remain UTC. Weeks run Monday through Sunday.
+- Pending is PENDING, DESIGNING, WAITING_APPROVAL, APPROVED, PRINTING, or FINISHING. READY is separate. Overdue means due before today and non-terminal.
+- Closed cash reports use stored expected, actual, and difference values; activity details explain but do not replace that reconciliation.

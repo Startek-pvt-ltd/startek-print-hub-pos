@@ -78,3 +78,12 @@ Staff roles are ADMIN, MANAGER, CASHIER, DESIGNER, and PRODUCTION. All authoriza
 - Closing transactionally stores expected cash, actual cash, signed difference, closer, time, note, and an idempotency key. Row-locking triggers serialize activity against close and protect the fixed session boundary.
 - Cash-register operators are ADMIN, MANAGER, and CASHIER. Only ADMIN/MANAGER can create expenses or record controlled deposits/withdrawals. DESIGNER and PRODUCTION have no Phase 5 financial access.
 - Phase 5 does not add dashboard analytics, reports, QZ Tray, physical printing, backup/restore, inventory, offline operation, multi-branch support, or file attachments.
+
+## Phase 6 dashboard and reports acceptance
+
+- Dashboard metrics, current-year monthly sales, and recent activity derive from source transactions using Colombo shop dates.
+- ADMIN/MANAGER see full financial and operational reporting. CASHIER dashboard finance is scoped to their work. DESIGNER/PRODUCTION dashboards are order-centric. Only ADMIN/MANAGER access full reports and exports.
+- Reports cover sales ranges, expense breakdowns, financial concepts, payment methods, distinct staff activities, outstanding invoices, order groups, customer purchase history, and cash reconciliation.
+- Sales exclude VOID invoices, expense totals exclude VOID expenses, and payments exclude reversals. Source records remain retained.
+- Key reports print as branded A4. Required reports export server-generated, formula-safe CSV. Dedicated report PDF is deferred.
+- No reporting ledger, summary table, printer integration, backup feature, inventory, offline mode, or multi-branch behavior is introduced.

@@ -59,3 +59,9 @@ App Router pages remain server-first. Small client components handle editable ro
 `cash-register-service` owns the single primary drawer, opening, controlled deposits/withdrawals, authoritative expected-cash calculation, and transactional closing. A nullable unique open guard enforces at most one OPEN session. Database triggers lock the referenced session when inserting drawer activity, so closing and activity cannot race. Closed sessions and retained expense history are database-protected from editing/deletion.
 
 New CASH payments require an open session and reference it. CARD, BANK_TRANSFER, and QR payments never receive a cash-session relation. The existing Payment and PaymentReversal tables remain authoritative; no duplicate sales ledger exists.
+
+### Phase 6 dashboard and reports
+
+`report-service` is the server-only read model for the dashboard, report tables, and CSV route. It queries existing transactional models in parallel and never persists aggregates. Reporting-domain helpers own Colombo date ranges, Decimal totals, exclusions, overdue classification, and CSV escaping. Recharts is isolated in one small dashboard Client Component.
+
+ADMIN and MANAGER can open the complete reports module. CASHIER dashboard finance is limited to their own invoices/payments; DESIGNER and PRODUCTION receive order-centric dashboards without financial values. CSV routes repeat server authorization and Zod validation.

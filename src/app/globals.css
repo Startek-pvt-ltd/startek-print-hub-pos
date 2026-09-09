@@ -39,4 +39,13 @@ button, a { -webkit-tap-highlight-color: transparent; }
 @media print {
   @page { size: 80mm auto; margin: 0; }
   html, body { width: 80mm; background: #fff; }
+
+  .report-page { page: report; width: 100%; color: #111827; }
+  .report-page .report-print-header { display: flex !important; align-items: center; gap: 1rem; border-bottom: 2px solid #0f172a; padding-bottom: 1rem; margin-bottom: 1rem; }
+  .report-page .report-table { box-shadow: none; border-color: #94a3b8; overflow: visible; }
+  .report-page table { min-width: 0; font-size: 9pt; }
+  .report-page th, .report-page td { padding: 6px; }
+  .report-page tr { break-inside: avoid; }
+  body:has(.report-page), html:has(.report-page) { width: auto; }
+  @page report { size: A4 landscape; margin: 12mm; }
 }
