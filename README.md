@@ -2,7 +2,7 @@
 
 Production-oriented, touch-first Point of Sale and print-job operations system for Startek Print Hub. The application uses Next.js App Router, TypeScript, Tailwind CSS, shadcn-style owned UI components, Prisma ORM, and PostgreSQL hosted on Supabase.
 
-Phase 4 adds quotations and print orders on top of the accepted Phase 3 billing foundation. Staff can create and print manual quotations, record their lifecycle, atomically convert accepted quotations to print orders, move orders through the controlled production workflow, assign staff, and create one linked invoice using the existing payment ledger. Expenses, cash register, reports, QZ Tray, and physical printer integration remain deferred.
+Phase 5 adds categorized expenses and a single physical cash-register session on top of the accepted billing, quotation, and print-order foundation. Authorized staff can record immutable expenses, operate and reconcile the drawer, record controlled deposits/withdrawals, and inspect retained session activity. Existing Payment records remain the sole invoice-payment ledger. Reports, QZ Tray, physical receipt-printer integration, and backup/restore remain deferred.
 
 ## Non-negotiable domain rule
 
@@ -33,7 +33,7 @@ pnpm db:validate
 pnpm build
 ```
 
-Database-backed Phase 3–4 verification uses ignored `.env`, which is loaded by both Next.js and the Prisma/seed commands. Set `DATABASE_ENVIRONMENT=development`, transaction-pooler `DATABASE_URL` (6543), and session-pooler `DIRECT_URL` (5432) for the same approved Supabase development project. Apply existing reviewed migrations with `pnpm exec prisma migrate deploy`; `pnpm db:migrate` is for authoring new development migrations.
+Database-backed Phase 3–5 verification uses ignored `.env`, which is loaded by both Next.js and the Prisma/seed commands. Set `DATABASE_ENVIRONMENT=development`, transaction-pooler `DATABASE_URL` (6543), and session-pooler `DIRECT_URL` (5432) for the same approved Supabase development project. Apply existing reviewed migrations with `pnpm exec prisma migrate deploy`; `pnpm db:migrate` is for authoring new development migrations.
 
 For local TLS verification, download the CA certificate from the project's Database Settings → SSL configuration into ignored `.env.supabase-ca.crt`. Before launching Node-based database commands or the application, export `NODE_EXTRA_CA_CERTS="$PWD/.env.supabase-ca.crt"` in that terminal. This trusts the provider certificate while retaining certificate and hostname verification. Do not disable certificate validation.
 

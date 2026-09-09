@@ -1,6 +1,6 @@
 import "server-only";
 
-import { Prisma } from "@/generated/prisma/client";
+import { Prisma, type PaymentMethod } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { calculateOutstanding, calculateValidPaidTotal, formatMoney, validatePayment } from "@/domain/financial";
 import { allocateInvoiceNumber } from "@/domain/invoice-number";
@@ -13,6 +13,18 @@ export class InvoiceOperationError extends Error {
     super(message);
     this.name = "InvoiceOperationError";
   }
+}
+
+async function cashSessionForPayment(tx: Prisma.TransactionClient, method: PaymentMethod) {
+  if (method !== "CASH") return null;
+  const session = await tx.cashSession.findUnique({
+    where: { openGuard: "PRIMARY" },
+    select: { id: true },
+  });
+  if (!session) {
+    throw new InvoiceOperationError("REGISTER_CLOSED", "Open the cash register before recording a cash payment");
+  }
+  return session.id;
 }
 
 const invoiceInclude = {
@@ -62,6 +74,9 @@ export async function createInvoiceInTransaction(tx: Prisma.TransactionClient, i
       return counter.nextValue;
     });
 
+    const initialCashSessionId = input.initialPayment
+      ? await cashSessionForPayment(tx, input.initialPayment.method)
+      : null;
     const invoice = await tx.invoice.create({
       data: {
         invoiceNumber,
@@ -75,7 +90,7 @@ export async function createInvoiceInTransaction(tx: Prisma.TransactionClient, i
         createdById: actorId,
         orderId,
         items: { create: input.items.map((item, index) => ({ description: item.description, quantity: item.quantity, unitPrice: item.unitPrice, lineTotal: totals.lineTotals[index].toFixed(2), sortOrder: index })) },
-        payments: initialPayment && input.initialPayment ? { create: { amount: initialPayment.toFixed(2), method: input.initialPayment.method, reference: input.initialPayment.reference || null, recordedById: actorId } } : undefined,
+        payments: initialPayment && input.initialPayment ? { create: { amount: initialPayment.toFixed(2), method: input.initialPayment.method, reference: input.initialPayment.reference || null, recordedById: actorId, cashSessionId: initialCashSessionId } } : undefined,
       },
       include: invoiceInclude,
     });
@@ -99,7 +114,8 @@ export async function addInvoicePayment(input: BalancePaymentInput, actorId: str
     if (invoice.status === "VOID") throw new InvoiceOperationError("INVOICE_VOID", "Payments cannot be added to a void invoice");
     const outstanding = calculateOutstanding(invoice.grandTotal.toString(), invoice.payments.map((payment) => ({ amount: payment.amount.toString(), reversed: Boolean(payment.reversal) })));
     const amount = validatePayment(input.amount, outstanding);
-    const payment = await tx.payment.create({ data: { invoiceId: invoice.id, amount: amount.toFixed(2), method: input.method, reference: input.reference || null, recordedById: actorId } });
+    const cashSessionId = await cashSessionForPayment(tx, input.method);
+    const payment = await tx.payment.create({ data: { invoiceId: invoice.id, amount: amount.toFixed(2), method: input.method, reference: input.reference || null, recordedById: actorId, cashSessionId } });
     await tx.auditLog.create({ data: { userId: actorId, action: "PAYMENT_RECORDED", entityType: "Payment", entityId: payment.id, metadata: { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber, amount: amount.toFixed(2), method: input.method } } });
     return { paymentId: payment.id, paid: formatMoney(calculateValidPaidTotal([...invoice.payments.map((item) => ({ amount: item.amount.toString(), reversed: Boolean(item.reversal) })), { amount }])), outstanding: formatMoney(outstanding.sub(amount)) };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });

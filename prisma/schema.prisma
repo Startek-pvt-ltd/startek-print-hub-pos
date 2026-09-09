@@ -32,6 +32,32 @@ enum PaymentMethod {
   QR
 }
 
+enum ExpenseCategory {
+  MATERIALS
+  ELECTRICITY
+  SALARY
+  TRANSPORT
+  MAINTENANCE
+  RENT
+  PETTY_CASH
+  OTHER
+}
+
+enum ExpenseStatus {
+  FINALIZED
+  VOID
+}
+
+enum CashSessionStatus {
+  OPEN
+  CLOSED
+}
+
+enum CashMovementType {
+  CASH_DEPOSIT
+  CASH_WITHDRAWAL
+}
+
 enum QuotationStatus {
   DRAFT
   ISSUED
@@ -68,6 +94,11 @@ model User {
   invoicesVoided         Invoice[]                @relation("InvoiceVoidedBy")
   paymentsRecorded       Payment[]                @relation("PaymentRecordedBy")
   reversalsRecorded      PaymentReversal[]        @relation("ReversalRecordedBy")
+  expensesCreated        Expense[]                @relation("ExpenseCreatedBy")
+  expensesVoided         Expense[]                @relation("ExpenseVoidedBy")
+  cashSessionsOpened     CashSession[]            @relation("CashSessionOpenedBy")
+  cashSessionsClosed     CashSession[]            @relation("CashSessionClosedBy")
+  cashMovementsCreated   CashMovement[]
   quotationsCreated      Quotation[]              @relation("QuotationCreatedBy")
   quotationsConverted    Quotation[]              @relation("QuotationConvertedBy")
   quotationStatusChanges QuotationStatusHistory[]
@@ -334,19 +365,22 @@ model InvoiceItem {
 }
 
 model Payment {
-  id           String           @id @default(cuid())
-  invoiceId    String
-  amount       Decimal          @db.Decimal(18, 2)
-  method       PaymentMethod
-  reference    String?
-  recordedById String
-  createdAt    DateTime         @default(now())
-  invoice      Invoice          @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
-  recordedBy   User             @relation("PaymentRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
-  reversal     PaymentReversal?
+  id            String           @id @default(cuid())
+  invoiceId     String
+  amount        Decimal          @db.Decimal(18, 2)
+  method        PaymentMethod
+  reference     String?
+  recordedById  String
+  cashSessionId String?
+  createdAt     DateTime         @default(now())
+  invoice       Invoice          @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  recordedBy    User             @relation("PaymentRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
+  cashSession   CashSession?     @relation(fields: [cashSessionId], references: [id], onDelete: Restrict)
+  reversal      PaymentReversal?
 
   @@index([invoiceId, createdAt])
   @@index([method, createdAt])
+  @@index([cashSessionId, createdAt])
   @@map("payments")
 }
 
@@ -361,4 +395,78 @@ model PaymentReversal {
 
   @@index([reversedById, createdAt])
   @@map("payment_reversals")
+}
+
+model Expense {
+  id             String          @id @default(cuid())
+  expenseNumber  String          @unique
+  idempotencyKey String          @unique
+  expenseDate    DateTime        @default(now())
+  category       ExpenseCategory
+  description    String
+  amount         Decimal         @db.Decimal(18, 2)
+  paymentMethod  PaymentMethod
+  status         ExpenseStatus   @default(FINALIZED)
+  createdById    String
+  cashSessionId  String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  voidedAt       DateTime?
+  voidedById     String?
+  voidReason     String?
+  createdBy      User            @relation("ExpenseCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  voidedBy       User?           @relation("ExpenseVoidedBy", fields: [voidedById], references: [id], onDelete: Restrict)
+  cashSession    CashSession?    @relation(fields: [cashSessionId], references: [id], onDelete: Restrict)
+
+  @@index([expenseDate])
+  @@index([category, expenseDate])
+  @@index([paymentMethod, expenseDate])
+  @@index([status, expenseDate])
+  @@index([createdById, expenseDate])
+  @@index([cashSessionId, expenseDate])
+  @@map("expenses")
+}
+
+model CashSession {
+  id                  String            @id @default(cuid())
+  idempotencyKey      String            @unique
+  closeIdempotencyKey String?           @unique
+  openGuard           String?           @unique
+  openingCash         Decimal           @db.Decimal(18, 2)
+  status              CashSessionStatus @default(OPEN)
+  openedAt            DateTime          @default(now())
+  openedById          String
+  closedAt            DateTime?
+  closedById          String?
+  expectedCash        Decimal?          @db.Decimal(18, 2)
+  actualCash          Decimal?          @db.Decimal(18, 2)
+  difference          Decimal?          @db.Decimal(18, 2)
+  closingNote         String?
+  openedBy            User              @relation("CashSessionOpenedBy", fields: [openedById], references: [id], onDelete: Restrict)
+  closedBy            User?             @relation("CashSessionClosedBy", fields: [closedById], references: [id], onDelete: Restrict)
+  payments            Payment[]
+  expenses            Expense[]
+  movements           CashMovement[]
+
+  @@index([status, openedAt])
+  @@index([openedById, openedAt])
+  @@index([closedById, closedAt])
+  @@map("cash_sessions")
+}
+
+model CashMovement {
+  id             String           @id @default(cuid())
+  idempotencyKey String           @unique
+  cashSessionId  String
+  type           CashMovementType
+  amount         Decimal          @db.Decimal(18, 2)
+  reason         String
+  createdById    String
+  createdAt      DateTime         @default(now())
+  cashSession    CashSession      @relation(fields: [cashSessionId], references: [id], onDelete: Restrict)
+  createdBy      User             @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([cashSessionId, createdAt])
+  @@index([createdById, createdAt])
+  @@map("cash_movements")
 }

@@ -17,6 +17,7 @@ execFileSync("git", ["check-ignore", "-q", ".env"]);
 
 const { db } = await import("../../src/lib/db");
 const { createInvoice, addInvoicePayment, getInvoiceById, voidInvoiceRecord, recordReceiptReprint } = await import("../../src/server/invoice-service");
+const { openCashSession } = await import("../../src/server/cash-register-service");
 const { invoiceInputSchema } = await import("../../src/lib/validations/invoice");
 const sql = new Client({ connectionString: process.env.DIRECT_URL });
 let actorId: string;
@@ -31,6 +32,9 @@ beforeAll(async () => {
   const admin = await db.user.findUniqueOrThrow({ where: { email: process.env.SEED_ADMIN_EMAIL!.trim().toLowerCase() } });
   expect(admin.role).toBe("ADMIN");
   actorId = admin.id;
+  if (!await db.cashSession.findUnique({ where: { openGuard: "PRIMARY" } })) {
+    await openCashSession({ idempotencyKey: randomUUID(), openingCash: "0.00" }, actorId);
+  }
 });
 afterAll(async () => { await sql.end(); await db.$disconnect(); });
 

@@ -44,4 +44,15 @@ describe("role permissions", () => {
     expect(hasPermission("PRODUCTION", "quotations:manage")).toBe(false);
     expect(hasPermission("MANAGER", "orders:cancel")).toBe(true);
   });
+
+  it("enforces the Phase 5 financial policy", () => {
+    expect(hasPermission("ADMIN", "expenses:manage")).toBe(true);
+    expect(hasPermission("MANAGER", "expenses:manage")).toBe(true);
+    expect(hasPermission("CASHIER", "expenses:manage")).toBe(false);
+    expect(hasPermission("CASHIER", "cash-register:operate")).toBe(true);
+    expect(hasPermission("CASHIER", "cash-register:adjust")).toBe(false);
+    expect(hasPermission("MANAGER", "cash-register:adjust")).toBe(true);
+    expect(hasPermission("DESIGNER", "cash-register:operate")).toBe(false);
+    expect(hasPermission("PRODUCTION", "expenses:manage")).toBe(false);
+  });
 });

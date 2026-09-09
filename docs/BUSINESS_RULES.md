@@ -51,6 +51,12 @@ Assignments reference active User records and are audited. Due-state presentatio
 
 Expected cash equals opening cash plus eligible cash receipts minus cash expenses minus approved cash withdrawals, plus approved cash deposits. Card, bank-transfer, and QR payments never affect drawer cash. Closing records actual cash and difference as actual minus expected. An ordinary user cannot edit a closed session.
 
+Phase 5 uses one primary physical drawer. New cash invoice payments and finalized cash expenses require an OPEN session and explicitly reference it; non-cash transactions do not. Session membership is therefore fixed at transaction creation rather than inferred later. The database locks the session row while adding activity and serializes that activity against closing.
+
+Valid, non-reversed CASH Payment records increase expected cash. A payment retained on a VOID invoice still represents physical cash and remains included unless its PaymentReversal exists. Reversals affecting a session must be recorded while that session is open; a closed reconciliation cannot silently change. Finalized, non-void CASH expenses reduce expected cash. CASH_DEPOSIT adds cash and CASH_WITHDRAWAL subtracts it.
+
+Expenses are finalized immediately and their number, date, category, description, amount, method, creator, and cash-session relation are immutable. ADMIN or MANAGER may void an open-session or non-cash expense with a reason; the original row remains. A cash expense in a closed session cannot be voided because that would rewrite historical reconciliation.
+
 ## Time, identity, and audit
 
 All important mutations resolve their actor from the server session. Dates use the shop timezone for business-day grouping. Audit metadata records enough before/after or financial context to explain an action without storing secrets. Important financial/audit history is retained, not physically deleted.

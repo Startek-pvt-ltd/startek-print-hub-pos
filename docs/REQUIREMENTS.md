@@ -68,3 +68,13 @@ Staff roles are ADMIN, MANAGER, CASHIER, DESIGNER, and PRODUCTION. All authoriza
 - Orders preserve print-job fields, active-user assignment, due dates, and the exact controlled workflow. Definitive role/transition checks run in server domain code, including for direct Server Action calls.
 - An Order can have at most one Invoice. The bridge reuses Phase 3 server calculations, invoice numbering, customer/item snapshots, payments, balances, and audit logging; Orders contain no parallel financial ledger.
 - Phase 4 does not add expenses, cash-register sessions, analytics, reports, QZ Tray, physical printer control, backup automation, attachments, inventory, or a product catalog.
+
+## Phase 5 expenses and cash register acceptance
+
+- Expenses are immediately finalized immutable snapshots with setting-driven atomic `SPH-EXP` numbering, eight approved categories, positive Decimal amounts, PaymentMethod reuse, idempotency, audit creation, and controlled voids. ADMIN/MANAGER manage expenses; CASHIER does not.
+- The shop has one primary physical drawer. A database unique guard and serializable transactions prevent duplicate OPEN sessions; closed sessions are terminal and database-protected.
+- New CASH payments and CASH expenses require and reference the OPEN session. CARD, BANK_TRANSFER, and QR never affect or join the physical drawer. Existing Payment rows remain the only invoice-payment ledger.
+- Expected cash is calculated on the server as opening cash plus valid non-reversed cash payments plus deposits, minus valid cash expenses and withdrawals. Invoice VOID alone does not remove retained cash; PaymentReversal controls ledger validity.
+- Closing transactionally stores expected cash, actual cash, signed difference, closer, time, note, and an idempotency key. Row-locking triggers serialize activity against close and protect the fixed session boundary.
+- Cash-register operators are ADMIN, MANAGER, and CASHIER. Only ADMIN/MANAGER can create expenses or record controlled deposits/withdrawals. DESIGNER and PRODUCTION have no Phase 5 financial access.
+- Phase 5 does not add dashboard analytics, reports, QZ Tray, physical printing, backup/restore, inventory, offline operation, multi-branch support, or file attachments.

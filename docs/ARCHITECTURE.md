@@ -51,3 +51,11 @@ Validation errors are returned beside forms. Unexpected route failures render a 
 Quotation calculations reuse the tested decimal financial domain. `quotation-service` owns customer snapshots, atomic numbering, draft editing, lifecycle history, and the accepted-quotation conversion transaction. `order-service` owns the canonical role-aware production transition policy, assignment, print-job metadata, and the one-order/one-invoice bridge. The bridge calls the existing invoice transaction helper; Orders never duplicate invoice payment or balance truth.
 
 App Router pages remain server-first. Small client components handle editable rows, confirmations, pending states, and Server Action calls. Every Phase 4 Server Action authenticates and authorizes again before calling a domain service.
+
+### Phase 5 expenses and cash register
+
+`expense-service` creates immutable, transaction-numbered expense snapshots and supports only a controlled void with actor, reason, and timestamp. ADMIN and MANAGER may manage expenses; CASHIER does not create expenses. Cash expenses require and explicitly reference the open register. Non-cash expenses remain independent of the physical drawer.
+
+`cash-register-service` owns the single primary drawer, opening, controlled deposits/withdrawals, authoritative expected-cash calculation, and transactional closing. A nullable unique open guard enforces at most one OPEN session. Database triggers lock the referenced session when inserting drawer activity, so closing and activity cannot race. Closed sessions and retained expense history are database-protected from editing/deletion.
+
+New CASH payments require an open session and reference it. CARD, BANK_TRANSFER, and QR payments never receive a cash-session relation. The existing Payment and PaymentReversal tables remain authoritative; no duplicate sales ledger exists.

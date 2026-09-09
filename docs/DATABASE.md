@@ -39,7 +39,7 @@ Development PostgreSQL acceptance on 8 September 2026 exposed a nullable void-re
 - Foreign keys use restrictive deletion for financial history. Customer deletion can null the relation because snapshots preserve the original identity.
 - PostgreSQL checks reject invalid financial values, blank item descriptions, blank reversal reasons, and incomplete void state.
 
-Expenses, expense categories, cash sessions, and cash movements remain planned for later phases.
+Phase 5 adds expenses and cash-register accounting; it does not change the Payment ledger's authority.
 
 ## Phase 4 quotations and print orders
 
@@ -56,6 +56,19 @@ There will be no `products`, `skus`, barcode catalog, stock-item selector, or pr
 Invoice paid amount is derived from successful, non-reversed payment ledger entries. Balance is authoritative grand total minus that sum and is never independently editable. Invoice creation, payment recording, quotation conversion, cash closing, and controlled reversal operations use serializable or appropriately locked transactions where races could create duplicate numbers or overpayment.
 
 Invoice numbers use an atomic `number_counters` upsert/increment inside the same serializable transaction as invoice creation. The value is formatted with the current prefix as `SPH-INV-000001`. Prefix changes affect only future numbers and never rewrite historic identifiers. An invoice idempotency key prevents repeat submission from producing another invoice.
+
+## Phase 5 expenses and cash register
+
+Migration `prisma/migrations/20260908165355_phase5_expenses_cash_register/migration.sql` adds `ExpenseCategory`, `ExpenseStatus`, `CashSessionStatus`, and `CashMovementType`, plus `expenses`, `cash_sessions`, and `cash_movements`. It adds nullable `payments.cashSessionId` for explicit physical-drawer membership; it does not create another payment ledger.
+
+- Expense numbers use the `expense` NumberCounter and setting-driven `SPH-EXP` prefix inside the same serializable transaction as creation. Idempotency keys prevent repeated submissions.
+- Expense CHECK constraints require positive amounts, nonblank descriptions, consistent cash-session linkage, and complete void metadata. A trigger prevents core edits and hard deletion.
+- Cash sessions use Decimal opening/expected/actual/difference values. A unique nullable `openGuard` permits exactly one `PRIMARY` OPEN session while allowing unlimited CLOSED history.
+- The cash-session state CHECK requires OPEN rows to have no closing data and CLOSED rows to have complete, arithmetically consistent reconciliation data.
+- Cash movement CHECK constraints require a positive amount and nonblank reason. Movement rows are append-only through the service surface.
+- Activity-insert triggers lock and require the referenced session to be OPEN. This prevents a cash payment, expense, movement, or reversal from racing past session close. Closed sessions are immutable and cannot be deleted.
+
+Session membership is explicit: new CASH payments and cash expenses reference the active session at creation. Non-cash payments/expenses do not. Historical Phase 3 cash payments have a null session and are not retroactively assigned.
 
 ## Migration workflow
 
