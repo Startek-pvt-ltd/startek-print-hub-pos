@@ -2,7 +2,7 @@
 
 ## Environments
 
-Use separate development/staging and production Supabase databases. Vercel Preview deployments must never point at production. Required secrets are `DATABASE_URL` for the pooled runtime connection and `DIRECT_URL` for migrations. Seed-admin variables are used only during controlled initial setup and should be removed afterward.
+Use separate development/staging and production Supabase databases. Vercel Preview deployments must never point at production. Required secrets are `DATABASE_URL` for the pooled runtime connection and `DIRECT_URL` for migrations. When the deployment runtime does not trust the Supabase certificate chain, also configure the server-only `SUPABASE_CA_CERT` with the project's approved CA certificate; never expose it through a `NEXT_PUBLIC_` variable. Seed-admin variables are used only during controlled initial setup and should be removed afterward.
 
 ## Initial deployment
 
