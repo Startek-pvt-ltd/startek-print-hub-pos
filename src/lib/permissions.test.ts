@@ -19,8 +19,6 @@ describe("role permissions", () => {
     expect(hasPermission("MANAGER", "staff:manage")).toBe(false);
     expect(hasPermission("MANAGER", "settings:view")).toBe(true);
     expect(hasPermission("MANAGER", "settings:manage")).toBe(false);
-    expect(hasPermission("MANAGER", "dashboard:reset-sales")).toBe(true);
-    expect(hasPermission("CASHIER", "dashboard:reset-sales")).toBe(false);
   });
 
   it("limits production staff to operational order access", () => {

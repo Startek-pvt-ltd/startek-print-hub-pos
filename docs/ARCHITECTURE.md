@@ -64,7 +64,7 @@ New CASH payments require an open session and reference it. CARD, BANK_TRANSFER,
 
 `report-service` is the server-only read model for the dashboard, report tables, and CSV route. It queries existing transactional models in parallel and never persists aggregates. Reporting-domain helpers own Colombo date ranges, Decimal totals, exclusions, overdue classification, and CSV escaping. Recharts is isolated in one small dashboard Client Component.
 
-ADMIN and MANAGER can open the complete reports module. CASHIER dashboard finance is limited to their own invoices/payments; DESIGNER and PRODUCTION receive order-centric dashboards without financial values. CSV routes repeat server authorization and Zod validation.
+ADMIN and MANAGER can open the complete reports module. Today’s Sales is the shop-wide total of every valid finalized invoice in the current Asia/Colombo business day; it is never reset or suppressed. Other CASHIER dashboard finance remains limited to their own invoices/payments. DESIGNER and PRODUCTION receive order-centric dashboards without financial values. CSV routes repeat server authorization and Zod validation.
 
 ## Phase 6.5 pre-printer hardening
 
@@ -72,4 +72,4 @@ ADMIN and MANAGER can open the complete reports module. CASHIER dashboard financ
 
 The authenticated invoice PDF route reads persisted invoice/settings data and generates A4 bytes server-side. Receipt, quotation, and report print styles own route-scoped named pages; there is no global paper-size rule. Autoprint is an explicit, consumed URL marker and never runs on a normal receipt view or reload.
 
-Dashboard sales resets are append-only presentation boundaries. A reset and audit row are written atomically; the dashboard filters only same-day invoices at or before the latest boundary. Reports and financial history are untouched. ADMIN and MANAGER alone hold the reset permission. The sidebar state is a local device preference. Chart code loads on demand, report support/data queries start together, unused report relations are skipped, and each runtime bounds PostgreSQL concurrency to five connections.
+The dashboard has no sales reset boundary, permission, action, or setting. Today’s Sales always uses valid finalized invoice records within the current Asia/Colombo day. The sidebar state is a local device preference. Chart code loads on demand, report support/data queries start together, unused report relations are skipped, and each runtime bounds PostgreSQL concurrency to five connections.

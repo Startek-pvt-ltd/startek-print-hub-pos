@@ -2,7 +2,7 @@
 
 Production-oriented, touch-first Point of Sale and print-job operations system for Startek Print Hub. The application uses Next.js App Router, TypeScript, Tailwind CSS, shadcn-style owned UI components, Prisma ORM, and PostgreSQL hosted on Supabase.
 
-Phase 6.5 hardens the accepted dashboard/reporting release before printer integration: A4 quotation isolation, branded A4 invoice PDFs, retail cash tender/change, deliberate finalize-and-print/download flows, an audited dashboard-display reset, a persistent collapsible sidebar, and bounded database-pool concurrency. Report values remain derived from authoritative source transactions. QZ Tray, physical receipt-printer integration, and backup/restore remain deferred.
+Phase 6.5 hardens the accepted dashboard/reporting release before printer integration: A4 quotation isolation, branded A4 invoice PDFs, retail cash tender/change, deliberate finalize-and-print/download flows, a compact thermal-receipt treatment, a persistent collapsible sidebar, and bounded database-pool concurrency. Today’s Sales and reports remain derived from authoritative source transactions and cannot be cleared or reset. QZ Tray, physical receipt-printer integration, and backup/restore remain deferred.
 
 ## Non-negotiable domain rule
 

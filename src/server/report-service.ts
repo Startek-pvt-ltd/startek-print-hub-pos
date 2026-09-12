@@ -4,7 +4,6 @@ import Decimal from "decimal.js";
 import type { ExpenseCategory, OrderStatus, PaymentMethod, Prisma, Role } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { calculateCashSummary } from "@/domain/cash-register";
-import { invoicesVisibleAfterReset } from "@/domain/dashboard-sales";
 import {
   businessDateRange,
   expenseSummary,
@@ -51,8 +50,8 @@ export async function getDashboardData(viewer: Viewer, now = new Date()) {
   const year = shopDateKey(now).slice(0, 4);
   const monthKeys = Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, "0")}`);
   const chartStart = new Date(`${monthKeys[0]}-01T00:00:00+05:30`);
-  const [todayInvoices, todayExpenses, outstandingInvoices, orders, recentInvoices, recentPayments, recentExpenses, recentMovements, chartInvoices, pendingOrders, readyOrders, dueToday, latestReset] = await Promise.all([
-    financialViewer ? db.invoice.findMany({ where: { ...invoiceScope, createdAt: { gte: today.start, lt: today.endExclusive } }, select: { status: true, grandTotal: true, createdAt: true, payments: { select: paymentSelect } } }) : [],
+  const [todayInvoices, todayExpenses, outstandingInvoices, orders, recentInvoices, recentPayments, recentExpenses, recentMovements, chartInvoices, pendingOrders, readyOrders, dueToday] = await Promise.all([
+    financialViewer ? db.invoice.findMany({ where: { status: "FINALIZED", createdAt: { gte: today.start, lt: today.endExclusive } }, select: { status: true, grandTotal: true, payments: { select: paymentSelect } } }) : [],
     privileged ? db.expense.findMany({ where: { expenseDate: { gte: today.start, lt: today.endExclusive } }, select: { status: true, amount: true, category: true } }) : [],
     financialViewer ? db.invoice.findMany({ where: { ...invoiceScope, status: "FINALIZED" }, select: { status: true, grandTotal: true, payments: { select: paymentSelect } } }) : [],
     db.order.findMany({ where: orderScope, select: { id: true, orderNumber: true, customerNameSnapshot: true, jobName: true, status: true, dueDate: true, assignedStaff: { select: { name: true } } }, orderBy: { updatedAt: "desc" }, take: 8 }),
@@ -64,10 +63,8 @@ export async function getDashboardData(viewer: Viewer, now = new Date()) {
     db.order.count({ where: { AND: [orderScope, { status: { in: ["PENDING", "DESIGNING", "WAITING_APPROVAL", "APPROVED", "PRINTING", "FINISHING"] } }] } }),
     db.order.count({ where: { AND: [orderScope, { status: "READY" }] } }),
     db.order.count({ where: { AND: [orderScope, { dueDate: new Date(`${today.from}T00:00:00Z`), status: { notIn: ["DELIVERED", "CANCELLED"] } }] } }),
-    db.dashboardSalesReset.findFirst({ where: { businessDate: new Date(`${today.from}T00:00:00.000Z`) }, orderBy: { resetAt: "desc" }, select: { resetAt: true } }),
   ]);
-  const visibleTodayInvoices = invoicesVisibleAfterReset(todayInvoices, latestReset?.resetAt ?? null);
-  const sales = salesSummary(invoiceRows(visibleTodayInvoices));
+  const sales = salesSummary(invoiceRows(todayInvoices));
   const expenses = expenseSummary(todayExpenses.map((expense) => ({ status: expense.status, amount: expense.amount.toString(), category: expense.category })));
   const outstanding = salesSummary(invoiceRows(outstandingInvoices)).outstanding;
   const monthly = monthKeys.map((key) => ({
@@ -91,18 +88,7 @@ export async function getDashboardData(viewer: Viewer, now = new Date()) {
     recentPayments,
     recentExpenses,
     recentMovements,
-    todaySalesResetAt: latestReset?.resetAt ?? null,
   };
-}
-
-export async function resetDashboardTodaySales(actorId: string, now = new Date()) {
-  const key = shopDateKey(now);
-  const businessDate = new Date(`${key}T00:00:00.000Z`);
-  return db.$transaction(async (tx) => {
-    const reset = await tx.dashboardSalesReset.create({ data: { businessDate, resetAt: now, createdById: actorId } });
-    await tx.auditLog.create({ data: { userId: actorId, action: "DASHBOARD_TODAY_SALES_RESET", entityType: "DashboardSalesReset", entityId: reset.id, metadata: { businessDate: key, resetAt: now.toISOString() } } });
-    return reset;
-  });
 }
 
 export async function getReportData(input: RangeInput) {

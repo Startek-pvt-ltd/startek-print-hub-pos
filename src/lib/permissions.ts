@@ -2,7 +2,6 @@ import type { Role } from "@/generated/prisma/client";
 
 export const permissions = [
   "dashboard:view",
-  "dashboard:reset-sales",
   "pos:use",
   "invoices:view",
   "payments:create",
@@ -28,7 +27,7 @@ export type Permission = (typeof permissions)[number];
 const rolePermissions: Record<Role, ReadonlySet<Permission>> = {
   ADMIN: new Set(permissions),
   MANAGER: new Set([
-    "dashboard:view", "dashboard:reset-sales", "pos:use", "orders:view", "orders:update-status", "orders:edit", "orders:assign", "orders:cancel", "orders:create-invoice",
+    "dashboard:view", "pos:use", "orders:view", "orders:update-status", "orders:edit", "orders:assign", "orders:cancel", "orders:create-invoice",
     "quotations:manage", "quotations:convert", "expenses:manage", "cash-register:operate", "cash-register:adjust",
     "reports:view", "staff:view", "settings:view", "invoices:void",
     "invoices:view", "payments:create", "receipts:reprint", "audit:view",

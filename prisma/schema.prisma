@@ -105,7 +105,6 @@ model User {
   ordersCreated          Order[]                  @relation("OrderCreatedBy")
   ordersAssigned         Order[]                  @relation("OrderAssignedTo")
   orderStatusChanges     OrderStatusHistory[]
-  dashboardSalesResets   DashboardSalesReset[]
 
   @@index([status])
   @@map("users")
@@ -385,19 +384,6 @@ model Payment {
   @@index([method, createdAt])
   @@index([cashSessionId, createdAt])
   @@map("payments")
-}
-
-model DashboardSalesReset {
-  id           String   @id @default(cuid())
-  businessDate DateTime @db.Date
-  resetAt      DateTime @default(now())
-  createdById  String
-  createdAt    DateTime @default(now())
-  createdBy    User     @relation(fields: [createdById], references: [id], onDelete: Restrict)
-
-  @@index([businessDate, resetAt])
-  @@index([createdById, createdAt])
-  @@map("dashboard_sales_resets")
 }
 
 model PaymentReversal {

@@ -75,4 +75,4 @@ All important mutations resolve their actor from the server session. Dates use t
 
 A CASH entry is tendered money, not automatically the ledger amount. Applied payment is the lesser of tendered cash and the current authoritative balance; change is tendered minus applied. Receipt and invoice PDF show all three values, but drawer receipts and paid totals use only applied Payment amounts. CARD, BANK_TRANSFER, and QR payments cannot exceed the outstanding balance.
 
-Resetting “Today’s Sales” changes only the dashboard boundary for the current Asia/Colombo business day. It never deletes or edits a transaction, never changes reports or cash figures, expires on the next business date, and requires ADMIN or MANAGER permission plus an audit record.
+“Today’s Sales” is every valid non-VOID finalized invoice grand total in the current Asia/Colombo business day. It has no clear/reset control or cutoff and must never hide or suppress valid sales.

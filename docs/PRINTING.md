@@ -21,9 +21,11 @@ Vercel POS -> Windows browser -> QZ Tray -> ESC/POS/Windows queue -> XP-80T USB
 
 ## Receipt contract
 
-The 80mm receipt includes monochrome branding, business address/phones/email, invoice number and timestamp, cashier, optional customer name/phone, manual items, subtotal, discount, total, complete payment summary, balance, optional order number/due date, QR code, thank-you text, and `Design & Deploy by Startek (PVT) LTD`. Reprints visibly include `REPRINT`.
+The 80mm receipt includes compact monochrome branding, business address/phones/email, invoice number and timestamp, cashier, optional customer name/phone, manual items, subtotal, discount, total, complete payment summary, balance, optional order number/due date, thank-you text, and `Design & Deploy by Startek (PVT) LTD`. Reprints visibly include `REPRINT`.
 
-Receipt content is generated from persisted server data, not browser-editable totals. Text is normalized to the printer-supported character set, line lengths are bounded, and user text cannot inject ESC/POS control bytes.
+The browser receipt uses the dedicated transparent, solid-black asset at `public/branding/startek-print-hub-receipt.png`. The approved master asset remains unchanged. The image is centered and compact; if it cannot load, the centered `STARTEK PRINT HUB` heading remains as the printable identity fallback. Receipt text uses `Arial, Helvetica, system-ui, sans-serif`, minimal spacing, wrapped descriptions, aligned amounts, and strong black-only contrast for approximately 203 DPI output.
+
+Receipt content is generated from persisted server data, not browser-editable totals. Text is normalized to the printer-supported character set, line lengths are bounded, and user text cannot inject ESC/POS control bytes. Future raw ESC/POS output must use the XP-80T built-in font and simple normal, bold, enlarged-total, and centered-header commands; it must not depend on browser or custom fonts.
 
 ## QZ Tray controls
 
@@ -46,4 +48,4 @@ Quotation print uses route-scoped `@page quotation` at A4 portrait with 12 mm ma
 
 Authorized invoice detail pages provide a server-generated A4 PDF containing approved branding, invoice/customer/cashier/order snapshots, manual items, authoritative totals, payment history, cash tender/change, page numbering, and `Design & Deploy by Startek (PVT) LTD`. Long content paginates. Generated acceptance downloads are temporary outputs, not fixtures.
 
-The 80mm browser receipt now includes the approved logo and persisted tender/change. “Finalize & print” uses a consumed one-use autoprint marker; normal navigation/reload does not print again. This is still browser-dialog printing, not QZ Tray, silent ESC/POS, or XP-80T integration.
+The 80mm browser receipt now includes a dedicated transparent monochrome derivative of the approved logo, minimalist sans-serif typography, a text fallback, and persisted tender/change. “Finalize & print” uses a consumed one-use autoprint marker; normal navigation/reload does not print again. This is still browser-dialog printing, not QZ Tray, silent ESC/POS, or XP-80T integration.

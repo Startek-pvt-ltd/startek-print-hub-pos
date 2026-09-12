@@ -10,13 +10,13 @@ Phase 6.5 hardens the accepted Phase 6 system only. It does not implement QZ Tra
 - Payment input treated tender as applied money. Shared Decimal logic now persists CASH tender/change while applying only the outstanding balance. A database constraint protects the relationship and preserves legacy rows.
 - Invoice PDF source recovered from the safety stash was reviewed and rebuilt as an authenticated server route plus focused tests. No generated PDF is tracked or required as a fixture.
 - Finalization offers print and PDF outcomes through one idempotent invoice service. Autoprint requires `autoprint=1`, consumes it before calling print, and cannot repeat on reload.
-- Today’s Sales resets only as a same-day display boundary. The transaction creates a reset and audit record; financial history and reports remain immutable.
+- The owner withdrew the proposed Today’s Sales reset. Its UI, permission, service, tests, and schema model are removed; Today’s Sales always includes every valid finalized invoice in the current Asia/Colombo business day.
 - Desktop navigation collapses accessibly and persists locally. Mobile navigation and role-filtered modules remain intact.
 - Dashboard chart code is lazy-loaded. Report data starts in parallel with support data and avoids order/cash-session queries when the view does not need them. Runtime database connections are bounded to five per instance.
 
 ## Security and permissions audit
 
-Protected pages/actions continue through the authenticated session and central server permission checks. Invoice PDF and quotation/receipt routes enforce their owning permissions. Dashboard reset is ADMIN/MANAGER only. Zod validates action/route input, server code repeats Decimal calculations, invoice/payment/reset writes are transactional, and audit entries contain operational metadata rather than credentials.
+Protected pages/actions continue through the authenticated session and central server permission checks. Invoice PDF and quotation/receipt routes enforce their owning permissions. There is no dashboard-reset permission or action. Zod validates action/route input, server code repeats Decimal calculations, invoice/payment writes are transactional, and audit entries contain operational metadata rather than credentials.
 
 React escaping, generic authentication errors, CSV formula neutralization, safe PDF text conversion, secure HTTP-only same-site sessions, database constraints, verified TLS, ignored environment files, and development-only integration guards remain in force. Direct resource routes re-check authentication/permission and do not accept client-computed totals.
 
@@ -31,15 +31,15 @@ After hardening, authenticated production-mode local navigation measured: dashbo
 ## Verification evidence
 
 - Environment/project/ports and Git-ignore safety checks passed without displaying URL or credential values.
-- Seven Prisma migrations are applied and development schema status is current.
-- Unit suite: 21 files, 86 tests passed.
-- Development database integration suite: 4 files, 24 tests passed, including tender/change persistence, constraint rejection, reset/report preservation, idempotency, concurrency, reversals, and immutable history.
+- Eight Prisma migrations are applied and development schema status is current. The eighth removes the withdrawn dashboard-reset persistence without rewriting applied history.
+- Unit suite: 20 files, 84 tests passed after reset-only tests were removed.
+- Development database integration suite: 4 files, 22 tests passed, covering tender/change persistence, constraint rejection, authoritative dashboard/report totals, idempotency, concurrency, reversals, and immutable history.
 - ESLint, TypeScript, Prisma validation, and Next.js production build passed.
-- Authenticated local browser acceptance passed for dashboard/reset visibility, persistent 48px sidebar toggle, cash preview, non-cash behavior, PDF finalization/download, invoice detail action, branded receipt, and isolated quotation A4.
+- Authenticated local browser acceptance passed for authoritative Today’s Sales with no reset/clear control and for the refined receipt: dedicated monochrome logo loaded, minimalist sans-serif typography and financial hierarchy rendered, and the centered text fallback survived a forced logo failure. Earlier Phase 6.5 acceptance continues to cover the persistent 48px sidebar toggle, cash preview, non-cash behavior, PDF finalization/download, invoice detail action, and isolated quotation A4.
 - Invoice PDF was downloaded, identified as A4, rendered, and visually inspected for logo, identity, lines, totals, payment history, footer, spacing, clipping, and page numbering.
 
 ## Preview result
 
-Vercel deployment `dpl_B5F339zC2yufwM6wTrdC7z4GQmDP` reached READY as a Preview (no production target) at `https://startek-print-hub-2a08b5xdf-kevinmenuja11-6769s-projects.vercel.app`. Exact-Preview acceptance verified the POST login fail-safe, active client validation before credentials, authenticated dashboard, reset permission, sidebar target, hydrated cash calculations, non-cash behavior, authorized invoice PDF response, branded receipt asset, and isolated quotation A4 route.
+Vercel deployment `dpl_B5F339zC2yufwM6wTrdC7z4GQmDP` reached READY as a Preview (no production target) at `https://startek-print-hub-2a08b5xdf-kevinmenuja11-6769s-projects.vercel.app`. That deployment predates the owner-approved removal of the reset feature and receipt refinements; it remains historical Preview evidence, not evidence for these replacement requirements.
 
 Physical Windows touch/printer checks are required when that hardware is available and are not equivalent to Phase 7 integration.
