@@ -2,7 +2,7 @@ import "server-only";
 
 import { Prisma, type PaymentMethod } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
-import { calculateOutstanding, calculateValidPaidTotal, formatMoney, validatePayment } from "@/domain/financial";
+import { calculateOutstanding, calculateValidPaidTotal, formatMoney, resolvePayment } from "@/domain/financial";
 import { allocateInvoiceNumber } from "@/domain/invoice-number";
 import { assertInvoiceCanBeVoided, buildReceiptReprintAudit } from "@/domain/invoice-rules";
 import { prepareInvoicePlan } from "@/domain/invoice-plan";
@@ -36,7 +36,7 @@ const invoiceInclude = {
     orderBy: { createdAt: "asc" as const },
     include: { recordedBy: { select: { name: true } }, reversal: true },
   },
-  order: { select: { id: true, orderNumber: true } },
+  order: { select: { id: true, orderNumber: true, jobName: true, dueDate: true } },
 } satisfies Prisma.InvoiceInclude;
 
 export async function createInvoice(input: InvoiceInput, actorId: string) {
@@ -90,7 +90,15 @@ export async function createInvoiceInTransaction(tx: Prisma.TransactionClient, i
         createdById: actorId,
         orderId,
         items: { create: input.items.map((item, index) => ({ description: item.description, quantity: item.quantity, unitPrice: item.unitPrice, lineTotal: totals.lineTotals[index].toFixed(2), sortOrder: index })) },
-        payments: initialPayment && input.initialPayment ? { create: { amount: initialPayment.toFixed(2), method: input.initialPayment.method, reference: input.initialPayment.reference || null, recordedById: actorId, cashSessionId: initialCashSessionId } } : undefined,
+        payments: initialPayment && input.initialPayment ? { create: {
+          amount: initialPayment.amount.toFixed(2),
+          method: input.initialPayment.method,
+          reference: input.initialPayment.reference || null,
+          recordedById: actorId,
+          cashSessionId: initialCashSessionId,
+          cashTendered: initialPayment.cashTendered?.toFixed(2),
+          changeGiven: initialPayment.changeGiven?.toFixed(2),
+        } } : undefined,
       },
       include: invoiceInclude,
     });
@@ -98,11 +106,11 @@ export async function createInvoiceInTransaction(tx: Prisma.TransactionClient, i
     await tx.auditLog.create({
       data: {
         userId: actorId, action: "INVOICE_FINALIZED", entityType: "Invoice", entityId: invoice.id,
-        metadata: { invoiceNumber, subtotal: totals.subtotal.toFixed(2), discount: totals.discount.toFixed(2), grandTotal: totals.grandTotal.toFixed(2), initialPayment: initialPayment?.toFixed(2) ?? "0.00" },
+        metadata: { invoiceNumber, subtotal: totals.subtotal.toFixed(2), discount: totals.discount.toFixed(2), grandTotal: totals.grandTotal.toFixed(2), initialPayment: initialPayment?.amount.toFixed(2) ?? "0.00" },
       },
     });
     if (initialPayment && invoice.payments[0]) {
-      await tx.auditLog.create({ data: { userId: actorId, action: "PAYMENT_RECORDED", entityType: "Payment", entityId: invoice.payments[0].id, metadata: { invoiceId: invoice.id, invoiceNumber, amount: initialPayment.toFixed(2), method: invoice.payments[0].method } } });
+      await tx.auditLog.create({ data: { userId: actorId, action: "PAYMENT_RECORDED", entityType: "Payment", entityId: invoice.payments[0].id, metadata: { invoiceId: invoice.id, invoiceNumber, amount: initialPayment.amount.toFixed(2), method: invoice.payments[0].method, cashTendered: initialPayment.cashTendered?.toFixed(2) ?? null, changeGiven: initialPayment.changeGiven?.toFixed(2) ?? null } } });
     }
     return summarizeInvoice(invoice);
 }
@@ -113,11 +121,27 @@ export async function addInvoicePayment(input: BalancePaymentInput, actorId: str
     if (!invoice) throw new InvoiceOperationError("NOT_FOUND", "Invoice was not found");
     if (invoice.status === "VOID") throw new InvoiceOperationError("INVOICE_VOID", "Payments cannot be added to a void invoice");
     const outstanding = calculateOutstanding(invoice.grandTotal.toString(), invoice.payments.map((payment) => ({ amount: payment.amount.toString(), reversed: Boolean(payment.reversal) })));
-    const amount = validatePayment(input.amount, outstanding);
+    const paymentPlan = resolvePayment(input.amount, outstanding, input.method);
+    const amount = paymentPlan.amount;
     const cashSessionId = await cashSessionForPayment(tx, input.method);
-    const payment = await tx.payment.create({ data: { invoiceId: invoice.id, amount: amount.toFixed(2), method: input.method, reference: input.reference || null, recordedById: actorId, cashSessionId } });
-    await tx.auditLog.create({ data: { userId: actorId, action: "PAYMENT_RECORDED", entityType: "Payment", entityId: payment.id, metadata: { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber, amount: amount.toFixed(2), method: input.method } } });
-    return { paymentId: payment.id, paid: formatMoney(calculateValidPaidTotal([...invoice.payments.map((item) => ({ amount: item.amount.toString(), reversed: Boolean(item.reversal) })), { amount }])), outstanding: formatMoney(outstanding.sub(amount)) };
+    const payment = await tx.payment.create({ data: {
+      invoiceId: invoice.id,
+      amount: amount.toFixed(2),
+      method: input.method,
+      reference: input.reference || null,
+      recordedById: actorId,
+      cashSessionId,
+      cashTendered: paymentPlan.cashTendered?.toFixed(2),
+      changeGiven: paymentPlan.changeGiven?.toFixed(2),
+    } });
+    await tx.auditLog.create({ data: { userId: actorId, action: "PAYMENT_RECORDED", entityType: "Payment", entityId: payment.id, metadata: { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber, amount: amount.toFixed(2), method: input.method, cashTendered: paymentPlan.cashTendered?.toFixed(2) ?? null, changeGiven: paymentPlan.changeGiven?.toFixed(2) ?? null } } });
+    return {
+      paymentId: payment.id,
+      paid: formatMoney(calculateValidPaidTotal([...invoice.payments.map((item) => ({ amount: item.amount.toString(), reversed: Boolean(item.reversal) })), { amount }])),
+      outstanding: formatMoney(outstanding.sub(amount)),
+      cashTendered: paymentPlan.cashTendered ? formatMoney(paymentPlan.cashTendered) : null,
+      changeGiven: paymentPlan.changeGiven ? formatMoney(paymentPlan.changeGiven) : null,
+    };
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }
 

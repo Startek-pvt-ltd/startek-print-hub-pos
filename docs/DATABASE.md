@@ -77,3 +77,9 @@ Phase 6 introduces no tables, aggregate columns, or migration. Values are calcul
 ## Migration workflow
 
 Create and test migrations against development first. Review generated SQL, apply to staging, verify data and constraints, then deploy application code and production migration in the documented order. Never use schema push against production and never edit a migration already applied to a shared environment.
+
+## Phase 6.5 hardening migration
+
+Migration `prisma/migrations/202609120001_pre_phase7_hardening/migration.sql` adds nullable `payments.cashTendered` and `payments.changeGiven`. Its CHECK constraint permits legacy CASH rows with both absent, otherwise requires a complete, arithmetically consistent tender/change pair; non-cash rows require both absent. `payments.amount` remains the applied ledger amount.
+
+The migration also adds append-only `dashboard_sales_resets` markers keyed by Asia/Colombo business date, reset time, and authorized creator. Markers affect dashboard selection only. No existing migration was edited, no cached sales total was introduced, and development was updated with `prisma migrate deploy`, never schema push.

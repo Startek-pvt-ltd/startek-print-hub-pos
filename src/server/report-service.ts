@@ -4,6 +4,7 @@ import Decimal from "decimal.js";
 import type { ExpenseCategory, OrderStatus, PaymentMethod, Prisma, Role } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { calculateCashSummary } from "@/domain/cash-register";
+import { invoicesVisibleAfterReset } from "@/domain/dashboard-sales";
 import {
   businessDateRange,
   expenseSummary,
@@ -19,7 +20,7 @@ import {
 } from "@/domain/reporting";
 
 type Viewer = { id: string; role: Role };
-type RangeInput = { preset?: ReportPreset; from?: string; to?: string; month?: string; now?: Date; category?: ExpenseCategory; paymentMethod?: PaymentMethod; staff?: string; customer?: string; status?: OrderStatus | "OVERDUE" | "OPEN" | "CLOSED"; search?: string; sort?: "newest" | "oldest" | "largest" };
+type RangeInput = { view?: "sales" | "expenses" | "financial" | "payments" | "staff" | "outstanding" | "orders" | "customers" | "cash-sessions"; kind?: "sales" | "expenses" | "payments" | "outstanding" | "orders" | "cash-sessions"; preset?: ReportPreset; from?: string; to?: string; month?: string; now?: Date; category?: ExpenseCategory; paymentMethod?: PaymentMethod; staff?: string; customer?: string; status?: OrderStatus | "OVERDUE" | "OPEN" | "CLOSED"; search?: string; sort?: "newest" | "oldest" | "largest" };
 
 export type ReportData = Awaited<ReturnType<typeof getReportData>>;
 
@@ -50,8 +51,8 @@ export async function getDashboardData(viewer: Viewer, now = new Date()) {
   const year = shopDateKey(now).slice(0, 4);
   const monthKeys = Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, "0")}`);
   const chartStart = new Date(`${monthKeys[0]}-01T00:00:00+05:30`);
-  const [todayInvoices, todayExpenses, outstandingInvoices, orders, recentInvoices, recentPayments, recentExpenses, recentMovements, chartInvoices, pendingOrders, readyOrders, dueToday] = await Promise.all([
-    financialViewer ? db.invoice.findMany({ where: { ...invoiceScope, createdAt: { gte: today.start, lt: today.endExclusive } }, select: { status: true, grandTotal: true, payments: { select: paymentSelect } } }) : [],
+  const [todayInvoices, todayExpenses, outstandingInvoices, orders, recentInvoices, recentPayments, recentExpenses, recentMovements, chartInvoices, pendingOrders, readyOrders, dueToday, latestReset] = await Promise.all([
+    financialViewer ? db.invoice.findMany({ where: { ...invoiceScope, createdAt: { gte: today.start, lt: today.endExclusive } }, select: { status: true, grandTotal: true, createdAt: true, payments: { select: paymentSelect } } }) : [],
     privileged ? db.expense.findMany({ where: { expenseDate: { gte: today.start, lt: today.endExclusive } }, select: { status: true, amount: true, category: true } }) : [],
     financialViewer ? db.invoice.findMany({ where: { ...invoiceScope, status: "FINALIZED" }, select: { status: true, grandTotal: true, payments: { select: paymentSelect } } }) : [],
     db.order.findMany({ where: orderScope, select: { id: true, orderNumber: true, customerNameSnapshot: true, jobName: true, status: true, dueDate: true, assignedStaff: { select: { name: true } } }, orderBy: { updatedAt: "desc" }, take: 8 }),
@@ -63,8 +64,10 @@ export async function getDashboardData(viewer: Viewer, now = new Date()) {
     db.order.count({ where: { AND: [orderScope, { status: { in: ["PENDING", "DESIGNING", "WAITING_APPROVAL", "APPROVED", "PRINTING", "FINISHING"] } }] } }),
     db.order.count({ where: { AND: [orderScope, { status: "READY" }] } }),
     db.order.count({ where: { AND: [orderScope, { dueDate: new Date(`${today.from}T00:00:00Z`), status: { notIn: ["DELIVERED", "CANCELLED"] } }] } }),
+    db.dashboardSalesReset.findFirst({ where: { businessDate: new Date(`${today.from}T00:00:00.000Z`) }, orderBy: { resetAt: "desc" }, select: { resetAt: true } }),
   ]);
-  const sales = salesSummary(invoiceRows(todayInvoices));
+  const visibleTodayInvoices = invoicesVisibleAfterReset(todayInvoices, latestReset?.resetAt ?? null);
+  const sales = salesSummary(invoiceRows(visibleTodayInvoices));
   const expenses = expenseSummary(todayExpenses.map((expense) => ({ status: expense.status, amount: expense.amount.toString(), category: expense.category })));
   const outstanding = salesSummary(invoiceRows(outstandingInvoices)).outstanding;
   const monthly = monthKeys.map((key) => ({
@@ -88,7 +91,18 @@ export async function getDashboardData(viewer: Viewer, now = new Date()) {
     recentPayments,
     recentExpenses,
     recentMovements,
+    todaySalesResetAt: latestReset?.resetAt ?? null,
   };
+}
+
+export async function resetDashboardTodaySales(actorId: string, now = new Date()) {
+  const key = shopDateKey(now);
+  const businessDate = new Date(`${key}T00:00:00.000Z`);
+  return db.$transaction(async (tx) => {
+    const reset = await tx.dashboardSalesReset.create({ data: { businessDate, resetAt: now, createdById: actorId } });
+    await tx.auditLog.create({ data: { userId: actorId, action: "DASHBOARD_TODAY_SALES_RESET", entityType: "DashboardSalesReset", entityId: reset.id, metadata: { businessDate: key, resetAt: now.toISOString() } } });
+    return reset;
+  });
 }
 
 export async function getReportData(input: RangeInput) {
@@ -96,6 +110,9 @@ export async function getReportData(input: RangeInput) {
   const search = input.search?.trim();
   const invoiceSearch: Prisma.InvoiceWhereInput = search ? { OR: [{ invoiceNumber: { contains: search, mode: "insensitive" } }, { customerNameSnapshot: { contains: search, mode: "insensitive" } }, { customerPhoneSnapshot: { contains: search } }] } : {};
   const orderSearch: Prisma.OrderWhereInput = search ? { OR: [{ orderNumber: { contains: search, mode: "insensitive" } }, { customerNameSnapshot: { contains: search, mode: "insensitive" } }, { customerPhoneSnapshot: { contains: search } }, { jobName: { contains: search, mode: "insensitive" } }] } : {};
+  const selectedView = input.view ?? input.kind;
+  const needsOrders = !selectedView || selectedView === "orders";
+  const needsCashSessions = !selectedView || selectedView === "cash-sessions" || selectedView === "staff";
   const [invoices, expenses, payments, orders, cashSessions] = await Promise.all([
     db.invoice.findMany({
       where: { createdAt: { gte: range.start, lt: range.endExclusive }, createdById: input.staff, customerId: input.customer, ...invoiceSearch },
@@ -112,16 +129,16 @@ export async function getReportData(input: RangeInput) {
       select: { id: true, createdAt: true, amount: true, method: true, reference: true, reversal: { select: { id: true } }, recordedBy: { select: { id: true, name: true, role: true } }, invoice: { select: { id: true, invoiceNumber: true } } },
       orderBy: { createdAt: "desc" },
     }),
-    db.order.findMany({
+    needsOrders ? db.order.findMany({
       where: { createdAt: { gte: range.start, lt: range.endExclusive }, assignedStaffId: input.staff, ...(input.status && !["OVERDUE", "OPEN", "CLOSED"].includes(input.status) ? { status: input.status as OrderStatus } : {}), ...orderSearch },
       select: { id: true, orderNumber: true, customerNameSnapshot: true, customerPhoneSnapshot: true, jobName: true, status: true, dueDate: true, createdAt: true, assignedStaff: { select: { name: true } }, invoice: { select: { id: true, invoiceNumber: true, grandTotal: true, payments: { select: paymentSelect } } } },
       orderBy: { createdAt: "desc" },
-    }),
-    db.cashSession.findMany({
+    }) : [],
+    needsCashSessions ? db.cashSession.findMany({
       where: { openedAt: { gte: range.start, lt: range.endExclusive }, openedById: input.staff, ...(input.status === "OPEN" || input.status === "CLOSED" ? { status: input.status } : {}) },
       select: { id: true, status: true, openingCash: true, expectedCash: true, actualCash: true, difference: true, openedAt: true, closedAt: true, openedBy: { select: { id: true, name: true, role: true } }, closedBy: { select: { id: true, name: true, role: true } }, payments: { select: paymentSelect }, expenses: { select: { amount: true, paymentMethod: true, status: true } }, movements: { select: { amount: true, type: true } } },
       orderBy: { openedAt: "desc" },
-    }),
+    }) : [],
   ]);
   const normalizedInvoices = invoiceRows(invoices);
   const sales = salesSummary(normalizedInvoices);

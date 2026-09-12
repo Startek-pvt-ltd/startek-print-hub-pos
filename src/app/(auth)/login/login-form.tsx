@@ -23,7 +23,7 @@ export function LoginForm() {
   });
 
   return (
-    <form onSubmit={onSubmit} className="mt-8 space-y-5" noValidate>
+    <form method="post" onSubmit={onSubmit} className="mt-8 space-y-5" noValidate>
       <label className="block space-y-2">
         <span className="text-sm font-bold text-slate-700">Email address</span>
         <Input {...register("email")} type="email" inputMode="email" autoComplete="username" aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "email-error" : undefined} placeholder="name@startek.lk" />

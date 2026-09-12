@@ -39,3 +39,11 @@ Auto-cut is enabled only after validation with the installed driver/firmware. A 
 4. Select the exact Windows printer queue in POS Settings.
 5. Run normal, long-description, multi-payment, balance, QR, reprint, and cutter test receipts.
 6. Keep the browser print fallback documented for support.
+
+## Phase 6.5 browser and PDF output
+
+Quotation print uses route-scoped `@page quotation` at A4 portrait with 12 mm margins and keeps the approved logo, identity, customer snapshot, number/date, manual items, totals, validity, notes, and footer. Receipt/report rules cannot override it. Operators select A4 and 100% scale in the Canon G3010 dialog; browser code cannot silently force device settings.
+
+Authorized invoice detail pages provide a server-generated A4 PDF containing approved branding, invoice/customer/cashier/order snapshots, manual items, authoritative totals, payment history, cash tender/change, page numbering, and `Design & Deploy by Startek (PVT) LTD`. Long content paginates. Generated acceptance downloads are temporary outputs, not fixtures.
+
+The 80mm browser receipt now includes the approved logo and persisted tender/change. “Finalize & print” uses a consumed one-use autoprint marker; normal navigation/reload does not print again. This is still browser-dialog printing, not QZ Tray, silent ESC/POS, or XP-80T integration.

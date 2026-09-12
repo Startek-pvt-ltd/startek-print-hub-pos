@@ -65,3 +65,5 @@ Not accepted or configured yet:
 - Automatic cutter operation.
 
 Browser receipt printing is not final XP-80T integration. Do not configure QZ Tray or treat this Preview as production.
+
+Phase 6.5 adds deliberate browser-dialog receipt printing and A4 invoice PDF download. The receipt autoprint marker is consumed once, and invoice finalization is not retried when output fails. On available Canon G3010 hardware, verify quotation/invoice output with A4 paper, portrait orientation, and 100% scale. These checks do not configure or certify the XP-80T USB printer.

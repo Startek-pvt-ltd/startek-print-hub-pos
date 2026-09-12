@@ -87,3 +87,13 @@ Staff roles are ADMIN, MANAGER, CASHIER, DESIGNER, and PRODUCTION. All authoriza
 - Sales exclude VOID invoices, expense totals exclude VOID expenses, and payments exclude reversals. Source records remain retained.
 - Key reports print as branded A4. Required reports export server-generated, formula-safe CSV. Dedicated report PDF is deferred.
 - No reporting ledger, summary table, printer integration, backup feature, inventory, offline mode, or multi-branch behavior is introduced.
+
+## Phase 6.5 pre-Phase 7 hardening acceptance
+
+- Quotation print is isolated A4 portrait, and invoice detail offers a branded server-generated A4 PDF with multipage support.
+- CASH entry records tendered, applied, and change; only applied money affects the ledger/drawer. Non-cash overpayment remains invalid.
+- POS exposes idempotent “Finalize & print” and “Finalize & download PDF” actions. Autoprint requires and consumes an explicit marker.
+- ADMIN/MANAGER may create an audited same-day dashboard display reset. It leaves all source/report history intact; other roles cannot invoke it.
+- Desktop navigation collapses to an icon rail, retains 48px controls/module access, and remembers its local state.
+- Runtime queries, payloads, lazy client code, connection concurrency, authorization, resource access, validation, audit metadata, TLS, secrets, and output routes receive a documented release audit.
+- Phase 7 printer bridge work, production deployment, backup/restore, inventory/catalog, offline mode, and physical Windows printer certification remain out of scope.

@@ -15,7 +15,7 @@ execFileSync("git", ["check-ignore", "-q", ".env"]);
 const { db } = await import("../../src/lib/db");
 const { createInvoice, addInvoicePayment, voidInvoiceRecord } = await import("../../src/server/invoice-service");
 const { createExpense, voidExpense: voidExpenseRecord } = await import("../../src/server/expense-service");
-const { getDashboardData, getReportData } = await import("../../src/server/report-service");
+const { getDashboardData, getReportData, resetDashboardTodaySales } = await import("../../src/server/report-service");
 const { hasPermission } = await import("../../src/lib/permissions");
 let actorId: string;
 const run = randomUUID();
@@ -78,6 +78,12 @@ test("only authorized management roles can access reports", () => {
   expect(hasPermission("PRODUCTION", "reports:view")).toBe(false);
 });
 
+test("only management can reset the dashboard sales display", () => {
+  expect(hasPermission("ADMIN", "dashboard:reset-sales")).toBe(true);
+  expect(hasPermission("MANAGER", "dashboard:reset-sales")).toBe(true);
+  expect(hasPermission("CASHIER", "dashboard:reset-sales")).toBe(false);
+});
+
 test("cash report retains stored closed-session reconciliation and activity detail", async () => {
   const report = await getReportData({ preset: "today" });
   const closed = report.cashSessions.find((row) => row.status === "CLOSED");
@@ -87,4 +93,19 @@ test("cash report retains stored closed-session reconciliation and activity deta
   expect(closed!.actualCash?.toFixed(2)).toBe(persisted.actualCash?.toFixed(2));
   expect(closed!.difference?.toFixed(2)).toBe(persisted.difference?.toFixed(2));
   expect(Number(closed!.cashReceipts)).toBeGreaterThanOrEqual(0);
+});
+
+test("dashboard reset changes only the current-day display and preserves reports", async () => {
+  const before = await createInvoice({ idempotencyKey: randomUUID(), customerName: "", customerPhone: "", discount: "0.00", items: [{ description: `Before dashboard reset ${run}`, quantity: "1", unitPrice: "1100.00" }], initialPayment: null }, actorId);
+  const reportBefore = await getReportData({ view: "sales", preset: "today" });
+  expect(reportBefore.invoices.some((row) => row.id === before.id)).toBe(true);
+  await resetDashboardTodaySales(actorId);
+  const resetView = await getDashboardData({ id: actorId, role: "ADMIN" });
+  expect(resetView.todaySales).toBe("0.00");
+  const after = await createInvoice({ idempotencyKey: randomUUID(), customerName: "", customerPhone: "", discount: "0.00", items: [{ description: `After dashboard reset ${run}`, quantity: "1", unitPrice: "2000.00" }], initialPayment: null }, actorId);
+  const dashboard = await getDashboardData({ id: actorId, role: "ADMIN" });
+  expect(dashboard.todaySales).toBe("2000.00");
+  const reportAfter = await getReportData({ view: "sales", preset: "today" });
+  expect(reportAfter.invoices.some((row) => row.id === before.id)).toBe(true);
+  expect(reportAfter.invoices.some((row) => row.id === after.id)).toBe(true);
 });

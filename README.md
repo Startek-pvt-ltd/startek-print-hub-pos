@@ -2,7 +2,7 @@
 
 Production-oriented, touch-first Point of Sale and print-job operations system for Startek Print Hub. The application uses Next.js App Router, TypeScript, Tailwind CSS, shadcn-style owned UI components, Prisma ORM, and PostgreSQL hosted on Supabase.
 
-Phase 6 adds a role-aware operational dashboard and management reports on top of the accepted billing, quotation, order, expense, and cash-register foundation. Report values are derived from authoritative source transactions. QZ Tray, physical receipt-printer integration, and backup/restore remain deferred.
+Phase 6.5 hardens the accepted dashboard/reporting release before printer integration: A4 quotation isolation, branded A4 invoice PDFs, retail cash tender/change, deliberate finalize-and-print/download flows, an audited dashboard-display reset, a persistent collapsible sidebar, and bounded database-pool concurrency. Report values remain derived from authoritative source transactions. QZ Tray, physical receipt-printer integration, and backup/restore remain deferred.
 
 ## Non-negotiable domain rule
 
@@ -43,6 +43,8 @@ Phase 3 authenticated browser acceptance was exercised against DEVELOPMENT Supab
 
 Reports use inclusive `Asia/Colombo` shop dates (Monday–Sunday weeks), A4 browser print layouts, and server-generated CSV files with spreadsheet-formula injection protection. Report PDF generation is intentionally deferred because browser print and CSV cover the Phase 6 export requirement.
 
+Invoice PDFs are generated on demand from persisted invoice, payment, order, staff, and settings snapshots. CASH input is tendered money; the server applies at most the outstanding balance and persists calculated change separately. Non-cash methods cannot exceed the outstanding balance. “Finalize & print” opens the persisted 80mm receipt with a single-use `autoprint=1` marker, while “Finalize & download PDF” finalizes through the same idempotent service before downloading A4 output.
+
 ## Documentation
 
 - `docs/REQUIREMENTS.md` — V1 scope and acceptance baseline
@@ -51,3 +53,4 @@ Reports use inclusive `Asia/Colombo` shop dates (Monday–Sunday weeks), A4 brow
 - `docs/BUSINESS_RULES.md` — financial and workflow invariants
 - `docs/PRINTING.md` — Windows, QZ Tray, ESC/POS, and XP-80T design
 - `docs/DEPLOYMENT.md` — Supabase, Vercel, migration, and recovery runbook
+- `docs/PRE_PHASE7_AUDIT.md` — Phase 6.5 scope, findings, timings, and release evidence

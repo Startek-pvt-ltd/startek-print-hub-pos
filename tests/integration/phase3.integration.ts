@@ -52,15 +52,30 @@ test("authoritative invoice creation, idempotency, independent cash and bank led
   expect(saved!.invoiceNumber).toBe(created.invoiceNumber);
 });
 
-test("overpayment rejected and concurrent payments cannot exceed balance", async () => {
+test("non-cash overpayment is rejected and concurrent payments cannot exceed balance", async () => {
   const invoice = await createInvoice(makeInput(), actorId);
-  await expect(addInvoicePayment({ invoiceId: invoice.id, amount: "101.00", method: "CASH", reference: "" }, actorId)).rejects.toThrow();
+  await expect(addInvoicePayment({ invoiceId: invoice.id, amount: "101.00", method: "CARD", reference: "" }, actorId)).rejects.toThrow();
   expect(await db.payment.count({ where: { invoiceId: invoice.id } })).toBe(0);
   const attempts = await Promise.allSettled(["CASH", "QR"].map(method => addInvoicePayment({ invoiceId: invoice.id, amount: "75.00", method: method as "CASH" | "QR", reference: "" }, actorId)));
   expect(attempts.filter(r => r.status === "fulfilled")).toHaveLength(1);
   const saved = await getInvoiceById(invoice.id);
   expect(saved!.payments).toHaveLength(1);
   expect(saved!.payments[0].amount.toFixed(2)).toBe("75.00");
+});
+
+test("cash over-tender persists tender and change while applying only the balance", async () => {
+  const invoice = await createInvoice(makeInput("940.00"), actorId);
+  const result = await addInvoicePayment({ invoiceId: invoice.id, amount: "1000.00", method: "CASH", reference: "Cash change acceptance" }, actorId);
+  expect(result).toMatchObject({ paid: "940.00", outstanding: "0.00", cashTendered: "1000.00", changeGiven: "60.00" });
+  const payment = await db.payment.findUniqueOrThrow({ where: { id: result.paymentId } });
+  expect(payment.amount.toFixed(2)).toBe("940.00");
+  expect(payment.cashTendered?.toFixed(2)).toBe("1000.00");
+  expect(payment.changeGiven?.toFixed(2)).toBe("60.00");
+
+  await sql.query("BEGIN");
+  try {
+    await expect(sql.query('UPDATE payments SET "changeGiven"=61 WHERE id=$1', [payment.id])).rejects.toMatchObject({ code: "23514" });
+  } finally { await sql.query("ROLLBACK"); }
 });
 
 test("void preserves records, rejects second void and payments; reprint only appends audit", async () => {

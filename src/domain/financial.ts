@@ -11,6 +11,7 @@ export class FinancialRuleError extends Error {
 
 export type ManualItemAmount = { quantity: Decimal.Value; unitPrice: Decimal.Value };
 export type PaymentAmount = { amount: Decimal.Value; reversed?: boolean };
+export type PaymentMethodValue = "CASH" | "CARD" | "BANK_TRANSFER" | "QR";
 
 function decimal(value: Decimal.Value, label: string) {
   try {
@@ -63,6 +64,23 @@ export function validatePayment(amountValue: Decimal.Value, outstandingValue: De
   if (amount.lte(0)) throw new FinancialRuleError("INVALID_PAYMENT", "Payment must be greater than zero");
   if (amount.gt(outstanding)) throw new FinancialRuleError("OVERPAYMENT", "Payment cannot exceed the outstanding balance");
   return amount;
+}
+
+export function resolvePayment(
+  submittedAmount: Decimal.Value,
+  outstandingValue: Decimal.Value,
+  method: PaymentMethodValue,
+) {
+  const tendered = money(submittedAmount);
+  const outstanding = money(outstandingValue);
+  if (tendered.lte(0)) throw new FinancialRuleError("INVALID_PAYMENT", "Payment must be greater than zero");
+  if (method !== "CASH") {
+    const amount = validatePayment(tendered, outstanding);
+    return { amount, cashTendered: null, changeGiven: null };
+  }
+  const amount = Decimal.min(tendered, outstanding).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+  const changeGiven = tendered.sub(amount).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+  return { amount, cashTendered: tendered, changeGiven };
 }
 
 export function formatMoney(value: Decimal.Value) {

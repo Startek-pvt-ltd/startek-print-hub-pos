@@ -39,3 +39,9 @@ Restore is Admin-only and is first rehearsed outside production. Validate backup
 - Vercel logs contain no passwords, session tokens, or connection strings.
 - Monitoring covers failed login spikes, server errors, database saturation, and migration failures.
 - The online-only limitation and manual fallback procedure are understood by shop staff.
+
+## Phase 6.5 Preview gate
+
+Verify environment identity, ports, and ignored files before database or deployment commands. Apply the one reviewed development migration, run unit/integration suites, validate Prisma, build, complete authenticated local acceptance, scan tracked/history/worktree content for secret patterns, and deploy Preview only. Repeat the critical journey on the exact Preview URL before checkpointing. Do not use `prisma db push`, a production database, `vercel --prod`, or production promotion.
+
+Keep the runtime database connection cap aligned with the Supabase pool allocation; the application currently uses at most five connections per instance. Development Server Action diagnostics can include form arguments, so use production-mode local acceptance and rotate a development credential immediately if diagnostic output exposes it. Browser automation must wait for login-form hydration/validation before entering credentials; the form declares POST so an early native submission cannot place credentials in a URL.

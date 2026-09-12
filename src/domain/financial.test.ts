@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateInvoiceTotals, calculateLineTotal, calculateOutstanding, calculateValidPaidTotal, validatePayment } from "./financial";
+import { calculateInvoiceTotals, calculateLineTotal, calculateOutstanding, calculateValidPaidTotal, resolvePayment, validatePayment } from "./financial";
 
 describe("manual invoice calculations", () => {
   it.each([
@@ -42,5 +42,20 @@ describe("payment ledger calculations", () => {
     expect(() => validatePayment(0, 100)).toThrow("greater than zero");
     expect(() => validatePayment(-1, 100)).toThrow("greater than zero");
     expect(() => validatePayment(101, 100)).toThrow("cannot exceed");
+  });
+
+  it("separates cash tendered, applied payment, and change", () => {
+    const overTender = resolvePayment("1000", "940", "CASH");
+    expect(overTender.amount.toFixed(2)).toBe("940.00");
+    expect(overTender.cashTendered?.toFixed(2)).toBe("1000.00");
+    expect(overTender.changeGiven?.toFixed(2)).toBe("60.00");
+
+    const partial = resolvePayment("500", "940", "CASH");
+    expect(partial.amount.toFixed(2)).toBe("500.00");
+    expect(partial.changeGiven?.toFixed(2)).toBe("0.00");
+  });
+
+  it("continues to reject overpayment for non-cash methods", () => {
+    expect(() => resolvePayment("1000", "940", "CARD")).toThrow("cannot exceed");
   });
 });

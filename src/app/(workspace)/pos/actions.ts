@@ -38,7 +38,7 @@ export async function findCustomerByPhone(input: unknown): Promise<MutationState
   }
 }
 
-export async function recordBalancePayment(input: unknown): Promise<MutationState<{ paymentId: string; paid: string; outstanding: string }>> {
+export async function recordBalancePayment(input: unknown): Promise<MutationState<{ paymentId: string; paid: string; outstanding: string; cashTendered: string | null; changeGiven: string | null }>> {
   const user = await requirePermission("payments:create");
   const parsed = balancePaymentSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the payment details" };

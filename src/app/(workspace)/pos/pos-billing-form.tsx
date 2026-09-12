@@ -2,9 +2,10 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useFieldArray, useForm, useWatch } from "react-hook-form";
-import { CheckCircle2, History, Plus, Search, Trash2 } from "lucide-react";
-import { calculateInvoiceTotals, formatMoney } from "@/domain/financial";
+import { CheckCircle2, Download, History, Plus, Printer, Search, Trash2 } from "lucide-react";
+import { calculateInvoiceTotals, formatMoney, resolvePayment } from "@/domain/financial";
 import { finalizeInvoice, findCustomerByPhone } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -24,6 +25,7 @@ const blankValues: BillingForm = {
 };
 
 export function PosBillingForm() {
+  const router = useRouter();
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const [serverError, setServerError] = useState<string>();
   const [success, setSuccess] = useState<{ id: string; invoiceNumber: string; customerName: string; grandTotal: string; paid: string; outstanding: string }>();
@@ -33,18 +35,20 @@ export function PosBillingForm() {
   const watchedItems = useWatch({ control, name: "items" });
   const discount = useWatch({ control, name: "discount" });
   const paymentAmount = useWatch({ control, name: "paymentAmount" });
+  const paymentMethod = useWatch({ control, name: "paymentMethod" });
 
   const display = useMemo(() => {
     try {
       const totals = calculateInvoiceTotals(watchedItems.map((item) => ({ quantity: item.quantity || 0, unitPrice: item.unitPrice || 0 })), discount || 0);
-      const paid = paymentAmount ? Number(paymentAmount) : 0;
-      return { lines: totals.lineTotals.map(formatMoney), subtotal: formatMoney(totals.subtotal), discount: formatMoney(totals.discount), total: formatMoney(totals.grandTotal), paid: formatMoney(paid), balance: formatMoney(Math.max(0, Number(totals.grandTotal) - paid)) };
+      const payment = paymentAmount ? resolvePayment(paymentAmount, totals.grandTotal, paymentMethod) : null;
+      return { lines: totals.lineTotals.map(formatMoney), subtotal: formatMoney(totals.subtotal), discount: formatMoney(totals.discount), total: formatMoney(totals.grandTotal), tendered: formatMoney(payment?.cashTendered ?? payment?.amount ?? 0), paid: formatMoney(payment?.amount ?? 0), change: formatMoney(payment?.changeGiven ?? 0), balance: formatMoney(totals.grandTotal.sub(payment?.amount ?? 0)) };
     } catch {
-      return { lines: watchedItems.map(() => "0.00"), subtotal: "0.00", discount: "0.00", total: "0.00", paid: "0.00", balance: "0.00" };
+      return { lines: watchedItems.map(() => "0.00"), subtotal: "0.00", discount: "0.00", total: "0.00", tendered: "0.00", paid: "0.00", change: "0.00", balance: "0.00" };
     }
-  }, [watchedItems, discount, paymentAmount]);
+  }, [watchedItems, discount, paymentAmount, paymentMethod]);
 
-  const submit = handleSubmit((values) => {
+  const submit = handleSubmit((values, event) => {
+    const completion = (event?.nativeEvent as SubmitEvent | undefined)?.submitter?.getAttribute("data-completion") === "download" ? "download" : "print";
     setServerError(undefined);
     startTransition(async () => {
       const result = await finalizeInvoice({
@@ -53,7 +57,18 @@ export function PosBillingForm() {
         initialPayment: values.paymentAmount === "" ? null : { amount: values.paymentAmount, method: values.paymentMethod, reference: values.paymentReference },
       });
       if (result.error) setServerError(result.error);
-      else if (result.data) setSuccess(result.data);
+      else if (result.data) {
+        setSuccess(result.data);
+        if (completion === "print") router.push(`/invoices/${result.data.id}/receipt?autoprint=1`);
+        else {
+          const anchor = document.createElement("a");
+          anchor.href = `/invoices/${result.data.id}/pdf`;
+          anchor.download = `${result.data.invoiceNumber}.pdf`;
+          document.body.appendChild(anchor);
+          anchor.click();
+          anchor.remove();
+        }
+      }
     });
   });
 
@@ -100,9 +115,9 @@ export function PosBillingForm() {
 
       <aside className="space-y-5 xl:sticky xl:top-6 xl:self-start">
         <Card className="p-6"><h2 className="text-xl font-black">Totals</h2><div className="mt-5 space-y-3 text-sm"><TotalRow label="Subtotal" value={display.subtotal} /><label className="flex items-center justify-between gap-4"><span className="font-bold text-slate-600">Discount</span><Input {...register("discount")} className="w-32 text-right" inputMode="decimal" /></label><div className="border-t-2 border-slate-900 pt-4"><TotalRow label="Grand total" value={display.total} strong /></div></div></Card>
-        <Card className="p-6"><h2 className="text-xl font-black">Initial payment</h2><p className="mt-1 text-sm text-slate-500">Optional advance, partial, or full payment.</p><div className="mt-5 space-y-4"><label><span className="mb-2 block text-sm font-bold">Amount</span><Input {...register("paymentAmount")} inputMode="decimal" placeholder="0.00" /></label><label><span className="mb-2 block text-sm font-bold">Method</span><select {...register("paymentMethod")} className="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 font-bold"><option value="CASH">Cash</option><option value="CARD">Card</option><option value="BANK_TRANSFER">Bank Transfer</option><option value="QR">QR Payment</option></select></label><label><span className="mb-2 block text-sm font-bold">Reference</span><Input {...register("paymentReference")} placeholder="Optional" /></label></div><div className="mt-5 border-t border-slate-200 pt-4"><TotalRow label="Paid" value={display.paid} /><TotalRow label="Balance" value={display.balance} strong /></div></Card>
+        <Card className="p-6"><h2 className="text-xl font-black">Initial payment</h2><p className="mt-1 text-sm text-slate-500">Optional advance, partial, or full payment.</p><div className="mt-5 space-y-4"><label><span className="mb-2 block text-sm font-bold">{paymentMethod === "CASH" ? "Cash tendered" : "Payment amount"}</span><Input {...register("paymentAmount")} inputMode="decimal" placeholder="0.00" /></label><label><span className="mb-2 block text-sm font-bold">Method</span><select {...register("paymentMethod")} className="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 font-bold"><option value="CASH">Cash</option><option value="CARD">Card</option><option value="BANK_TRANSFER">Bank Transfer</option><option value="QR">QR Payment</option></select></label><label><span className="mb-2 block text-sm font-bold">Reference</span><Input {...register("paymentReference")} placeholder="Optional" /></label></div><div className="mt-5 space-y-2 border-t border-slate-200 pt-4">{paymentMethod === "CASH" ? <TotalRow label="Cash received" value={display.tendered} /> : null}<TotalRow label="Payment applied" value={display.paid} />{paymentMethod === "CASH" ? <TotalRow label="Change due" value={display.change} strong /> : null}<TotalRow label="Outstanding" value={display.balance} strong /></div></Card>
         {serverError ? <p role="alert" className="rounded-xl bg-rose-50 p-4 text-sm font-bold text-rose-700">{serverError}</p> : null}
-        <Button size="lg" className="w-full text-base" disabled={pending}>{pending ? "Finalizing…" : "Finalize invoice"}</Button>
+        <div className="grid gap-3"><Button type="submit" data-completion="print" size="lg" className="w-full text-base" disabled={pending}><Printer className="size-5" />{pending ? "Finalizing…" : "Finalize & print"}</Button><Button type="submit" data-completion="download" size="lg" variant="secondary" className="w-full text-base" disabled={pending}><Download className="size-5" />{pending ? "Finalizing…" : "Finalize & download PDF"}</Button></div>
       </aside>
     </form>
   );
@@ -111,5 +126,5 @@ export function PosBillingForm() {
 function TotalRow({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) { return <div className={`flex items-center justify-between ${strong ? "text-lg font-black text-slate-950" : "font-bold text-slate-600"}`}><span>{label}</span><span>Rs. {value}</span></div>; }
 
 function InvoiceSuccess({ invoice, onNew }: { invoice: { id: string; invoiceNumber: string; customerName: string; grandTotal: string; paid: string; outstanding: string }; onNew: () => void }) {
-  return <Card className="mx-auto max-w-2xl p-8 text-center sm:p-10"><div className="mx-auto grid size-16 place-items-center rounded-full bg-emerald-50 text-emerald-700"><CheckCircle2 className="size-9" /></div><p className="mt-5 text-sm font-black uppercase tracking-[.18em] text-emerald-700">Invoice created</p><h2 className="mt-2 text-3xl font-black text-slate-950">{invoice.invoiceNumber}</h2><p className="mt-2 text-slate-500">{invoice.customerName}</p><div className="mt-7 grid gap-3 rounded-2xl bg-slate-50 p-5 sm:grid-cols-3"><TotalRow label="Total" value={invoice.grandTotal} strong /><TotalRow label="Paid" value={invoice.paid} /><TotalRow label="Balance" value={invoice.outstanding} strong /></div><div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row"><Button asChild><Link href={`/invoices/${invoice.id}`}>View invoice</Link></Button><Button asChild variant="secondary"><Link href={`/invoices/${invoice.id}/receipt`}>Print receipt</Link></Button><Button type="button" variant="secondary" onClick={onNew}>New invoice</Button></div></Card>;
+  return <Card className="mx-auto max-w-2xl p-8 text-center sm:p-10"><div className="mx-auto grid size-16 place-items-center rounded-full bg-emerald-50 text-emerald-700"><CheckCircle2 className="size-9" /></div><p className="mt-5 text-sm font-black uppercase tracking-[.18em] text-emerald-700">Invoice created</p><h2 className="mt-2 text-3xl font-black text-slate-950">{invoice.invoiceNumber}</h2><p className="mt-2 text-slate-500">{invoice.customerName}</p><div className="mt-7 grid gap-3 rounded-2xl bg-slate-50 p-5 sm:grid-cols-3"><TotalRow label="Total" value={invoice.grandTotal} strong /><TotalRow label="Paid" value={invoice.paid} /><TotalRow label="Balance" value={invoice.outstanding} strong /></div><div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row"><Button asChild><Link href={`/invoices/${invoice.id}`}>View invoice</Link></Button><Button asChild variant="secondary"><Link href={`/invoices/${invoice.id}/receipt`}><Printer className="size-5" /> Print receipt</Link></Button><Button asChild variant="secondary"><a href={`/invoices/${invoice.id}/pdf`} download><Download className="size-5" /> Download PDF</a></Button><Button type="button" variant="secondary" onClick={onNew}>New invoice</Button></div></Card>;
 }

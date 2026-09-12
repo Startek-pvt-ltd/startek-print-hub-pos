@@ -15,6 +15,8 @@ describe("server invoice preparation", () => {
     expect(plan.snapshot).toEqual({ name: "Test Customer", phoneNumber: "0771234567" });
     expect(plan.totals.subtotal.toFixed(2)).toBe("4500.00");
     expect(plan.totals.grandTotal.toFixed(2)).toBe("4000.00");
-    expect(plan.initialPayment?.toFixed(2)).toBe("2000.00");
+    expect(plan.initialPayment?.amount.toFixed(2)).toBe("2000.00");
+    expect(plan.initialPayment?.cashTendered?.toFixed(2)).toBe("2000.00");
+    expect(plan.initialPayment?.changeGiven?.toFixed(2)).toBe("0.00");
   });
 });

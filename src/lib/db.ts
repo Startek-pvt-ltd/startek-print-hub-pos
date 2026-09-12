@@ -7,7 +7,14 @@ function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) throw new Error("DATABASE_URL is not configured");
   const ca = process.env.SUPABASE_CA_CERT;
-  let adapterConfig: ConstructorParameters<typeof PrismaPg>[0] = { connectionString };
+  // Bound per-instance concurrency so one dashboard/report fan-out cannot
+  // exhaust a small transaction-pooler allocation and leave route streams open.
+  let adapterConfig: ConstructorParameters<typeof PrismaPg>[0] = {
+    connectionString,
+    max: 5,
+    connectionTimeoutMillis: 10_000,
+    idleTimeoutMillis: 30_000,
+  };
 
   if (ca) {
     const url = new URL(connectionString);
@@ -17,6 +24,9 @@ function createPrismaClient() {
     adapterConfig = {
       connectionString: url.toString(),
       ssl: { ca, rejectUnauthorized: true },
+      max: 5,
+      connectionTimeoutMillis: 10_000,
+      idleTimeoutMillis: 30_000,
     };
   }
 

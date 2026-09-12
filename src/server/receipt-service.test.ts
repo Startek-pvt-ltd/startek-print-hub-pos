@@ -10,7 +10,8 @@ describe("persisted receipt view model", () => {
       subtotal: new Decimal(4500), discount: new Decimal(0), grandTotal: new Decimal(4500),
       createdBy: { name: "Admin" },
       items: [{ description: "Banner Printing", quantity: new Decimal(1), unitPrice: new Decimal(3500), lineTotal: new Decimal(3500) }, { description: "Design Charge", quantity: new Decimal(1), unitPrice: new Decimal(1000), lineTotal: new Decimal(1000) }],
-      payments: [{ method: "CASH", amount: new Decimal(2000), reference: null, reversal: null }],
+      payments: [{ method: "CASH", amount: new Decimal(2000), cashTendered: new Decimal(2500), changeGiven: new Decimal(500), reference: null, reversal: null }],
+      order: { orderNumber: "SPH-ORD-000001", jobName: "Banner job", dueDate: new Date("2026-09-10T00:00:00Z") },
     } as unknown as Parameters<typeof buildReceiptViewModel>[0];
     const settings = { businessName: "Startek Print Hub", address: "No.62 Padukka Road, Meegoda", phonePrimary: "0705935320", phoneSecond: "0777250493", email: "startekprinthub@gmail.com", receiptFooter: "Design & Deploy by Startek (PVT) LTD" };
     const receipt = buildReceiptViewModel(invoice, settings, true);
@@ -19,5 +20,7 @@ describe("persisted receipt view model", () => {
     expect(receipt.total).toBe("4500.00");
     expect(receipt.paid).toBe("2000.00");
     expect(receipt.outstanding).toBe("2500.00");
+    expect(receipt.payments[0]).toMatchObject({ cashTendered: "2500.00", changeGiven: "500.00" });
+    expect(receipt.order?.orderNumber).toBe("SPH-ORD-000001");
   });
 });

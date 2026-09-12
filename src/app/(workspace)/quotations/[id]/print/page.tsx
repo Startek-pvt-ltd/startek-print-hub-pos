@@ -29,8 +29,8 @@ export default async function QuotationPrint({
   const businessEmail = settings?.email ?? "startekprinthub@gmail.com";
 
   return (
-    <main className="mx-auto min-h-[297mm] max-w-[210mm] bg-white p-8 text-slate-800 shadow-sm print:min-h-0 print:max-w-none print:p-0 print:shadow-none">
-      <style>{`@page { size: A4 portrait; margin: 12mm; } @media print { html, body { background: white !important; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }`}</style>
+    <main className="quotation-print-page mx-auto min-h-[297mm] max-w-[210mm] bg-white p-8 text-slate-800 shadow-sm print:min-h-0 print:max-w-none print:p-0 print:shadow-none">
+      <style>{`@page quotation { size: A4 portrait; margin: 12mm; } @media print { .quotation-print-page { page: quotation; width: 100%; } html:has(.quotation-print-page), body:has(.quotation-print-page) { background: white !important; } body:has(.quotation-print-page) { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }`}</style>
       <div className="mb-8 print:hidden">
         <QuotationOutputActions
           quotationId={quotation.id}
