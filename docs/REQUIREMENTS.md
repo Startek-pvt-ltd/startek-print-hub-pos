@@ -67,7 +67,7 @@ Staff roles are ADMIN, MANAGER, CASHIER, DESIGNER, and PRODUCTION. All authoriza
 - Only accepted, non-expired quotations convert. One serializable transaction creates the `SPH-ORD` order and its items/history, links it, marks the quotation CONVERTED, and writes audits. Database uniqueness rejects duplicates.
 - Orders preserve print-job fields, active-user assignment, due dates, and the exact controlled workflow. Definitive role/transition checks run in server domain code, including for direct Server Action calls.
 - An Order can have at most one Invoice. The bridge reuses Phase 3 server calculations, invoice numbering, customer/item snapshots, payments, balances, and audit logging; Orders contain no parallel financial ledger.
-- Phase 4 does not add expenses, cash-register sessions, analytics, reports, QZ Tray, physical printer control, backup automation, attachments, inventory, or a product catalog.
+- Phase 4 does not add expenses, cash-register sessions, analytics, reports, physical printer control, backup automation, attachments, inventory, or a product catalog.
 
 ## Phase 5 expenses and cash register acceptance
 
@@ -77,7 +77,7 @@ Staff roles are ADMIN, MANAGER, CASHIER, DESIGNER, and PRODUCTION. All authoriza
 - Expected cash is calculated on the server as opening cash plus valid non-reversed cash payments plus deposits, minus valid cash expenses and withdrawals. Invoice VOID alone does not remove retained cash; PaymentReversal controls ledger validity.
 - Closing transactionally stores expected cash, actual cash, signed difference, closer, time, note, and an idempotency key. Row-locking triggers serialize activity against close and protect the fixed session boundary.
 - Cash-register operators are ADMIN, MANAGER, and CASHIER. Only ADMIN/MANAGER can create expenses or record controlled deposits/withdrawals. DESIGNER and PRODUCTION have no Phase 5 financial access.
-- Phase 5 does not add dashboard analytics, reports, QZ Tray, physical printing, backup/restore, inventory, offline operation, multi-branch support, or file attachments.
+- Phase 5 does not add dashboard analytics, reports, physical printing, backup/restore, inventory, offline operation, multi-branch support, or file attachments.
 
 ## Phase 6 dashboard and reports acceptance
 
@@ -93,7 +93,17 @@ Staff roles are ADMIN, MANAGER, CASHIER, DESIGNER, and PRODUCTION. All authoriza
 - Quotation print is isolated A4 portrait, and invoice detail offers a branded server-generated A4 PDF with multipage support.
 - CASH entry records tendered, applied, and change; only applied money affects the ledger/drawer. Non-cash overpayment remains invalid.
 - POS exposes idempotent “Finalize & print” and “Finalize & download PDF” actions. Autoprint requires and consumes an explicit marker.
-- ADMIN/MANAGER may create an audited same-day dashboard display reset. It leaves all source/report history intact; other roles cannot invoke it.
+- Today’s Sales has no clear/reset mechanism and always includes every finalized non-VOID invoice in the current Asia/Colombo day.
 - Desktop navigation collapses to an icon rail, retains 48px controls/module access, and remembers its local state.
 - Runtime queries, payloads, lazy client code, connection concurrency, authorization, resource access, validation, audit metadata, TLS, secrets, and output routes receive a documented release audit.
-- Phase 7 printer bridge work, production deployment, backup/restore, inventory/catalog, offline mode, and physical Windows printer certification remain out of scope.
+- Phase 7 printer bridge work, backup/restore, and physical Windows printer certification remain out of this earlier checkpoint; production deployment, inventory/catalog, and offline mode remain out of scope.
+
+## Phase 7 printing and backup acceptance
+
+- Vercel renders an 80mm receipt in the Windows browser. The browser print dialog sends it through the selected local XP-80T/XP-80C Windows queue; the application never accesses USB, discovers printers, or sends raw printer commands.
+- Receipt pages reuse persisted data and show the original invoice identity, manual items, server totals, payment ledger, cash tender/change, balance, reprint state, and approved monochrome logo with text fallback. Receipt QR/barcode output is intentionally excluded by owner decision. Print cancellation or failure never retries or rolls back a financial mutation.
+- Finalize opens the persisted receipt with a consumed one-time autoprint marker. The receipt always retains one manual `PRINT RECEIPT` action. Paper feed and cutter behavior are configured only in Windows Printer Preferences when supported by the installed driver.
+- Backup and restore routes require Admin permission. A versioned ZIP includes required business/history records, counts, compatibility metadata, and SHA-256 integrity, while excluding password hashes, sessions, connection values, and private keys.
+- Upload performs read-only checksum/version/relation/financial validation and count preview. Restore requires a separate confirmation, the approved DEVELOPMENT environment, and an empty target; it runs in one serializable transaction, verifies counts, and audits success.
+- Supabase managed backup/PITR, when included in the selected plan, remains the primary database recovery mechanism and must be verified before Production launch.
+- The owner confirmed all mandatory physical browser-print and touchscreen checks passed on 13 September 2026 using the real Startek Print Hub Windows touch POS and USB-connected Xprinter XP-80T. `docs/WINDOWS_POS_SETUP.md` is the acceptance record; this does not authorize Production deployment.

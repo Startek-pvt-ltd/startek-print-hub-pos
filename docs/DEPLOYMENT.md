@@ -4,6 +4,8 @@
 
 Use separate development/staging and production Supabase databases. Vercel Preview deployments must never point at production. Required secrets are `DATABASE_URL` for the pooled runtime connection and `DIRECT_URL` for migrations. When the deployment runtime does not trust the Supabase certificate chain, also configure the server-only `SUPABASE_CA_CERT` with the project's approved CA certificate; never expose it through a `NEXT_PUBLIC_` variable. Seed-admin variables are used only during controlled initial setup and should be removed afterward.
 
+Receipt printing requires no printer credentials or signing environment values. The browser print dialog and locally installed Windows driver are the only printing boundary. The application must never receive USB access, raw printer commands, or private printer keys.
+
 ## Initial deployment
 
 1. Create the Supabase project in an appropriate region and retain project recovery credentials securely.
@@ -14,7 +16,7 @@ Use separate development/staging and production Supabase databases. Vercel Previ
 6. Deploy the Vercel application with production secrets.
 7. Seed the initial administrator through a controlled environment, sign in, then remove seed password variables.
 8. Verify authentication, role restrictions, settings audit entries, LKR/Rs. display, Asia/Colombo timezone, 80mm XP-80T/USB defaults, and Windows touch layout.
-9. Configure the Windows browser/QZ Tray only during the printer phase.
+9. Configure the XP-80T/XP-80C queue, 80mm paper, and optional cutter in Windows Printer Preferences, then verify the browser print dialog on the real POS.
 
 Never place credentials in Git, client-side variables, screenshots, or audit metadata.
 
@@ -25,6 +27,8 @@ Every release uses a reviewed Git commit. Database migrations are additive and b
 ## Backup strategy
 
 Managed Supabase backups and point-in-time recovery, when enabled for the selected plan, are the primary disaster-recovery layer. Verify current provider retention and restoration behavior before production launch. The V1 manual export is a complementary, versioned portability package containing core data, schema/application version, creation time, and creator.
+
+Use Settings → Backup & Restore to generate and download the application-level ZIP. Store it in an owner-approved encrypted location. The application package is not a PostgreSQL physical backup and does not replace provider backups/PITR. Follow `docs/BACKUP_RESTORE.md` for package validation and rehearsal.
 
 ## Restore runbook
 

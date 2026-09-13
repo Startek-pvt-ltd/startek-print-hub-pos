@@ -1,51 +1,46 @@
 # Printing
 
-## A4 quotations
-
-Quotation print views are formatted for A4 portrait paper and include the Startek Print Hub logo, business contact details, customer snapshot, manual line items, totals, validity, and notes. The quotation screen provides two outputs:
-
-- **Print A4 quotation** opens the operating system print dialog. Select the Canon G3010, A4 paper, portrait orientation, and 100% scale. Browser security requires the user to confirm the printer and settings.
-- **Download PDF** creates the same persisted quotation as an A4 PDF on the server and downloads it to the current device. The protected endpoint requires quotation-management permission and does not accept browser-supplied totals.
-
-Long quotations repeat the table header and paginate without splitting a line item. The PDF includes page numbers and the same approved logo stored at `public/brand/startek-logo.png`.
-
-## Receipt printing
-
-## Production architecture
-
-The Xprinter XP-80T is attached by USB to the Windows touch POS computer. The Vercel application cannot access that USB device. The browser sends a controlled receipt job to QZ Tray on the same Windows computer, which submits ESC/POS bytes or a printer-compatible job to the configured XP-80T queue.
+## Approved receipt architecture
 
 ```text
-Vercel POS -> Windows browser -> QZ Tray -> ESC/POS/Windows queue -> XP-80T USB
+Vercel POS
+  -> Windows Edge or Chrome
+  -> Browser Print dialog
+  -> XP-80T/XP-80C Windows printer driver and queue
+  -> USB printer
 ```
 
-## Receipt contract
+The application never accesses USB, discovers printer queues, polls printer status, or sends raw printer, feed, or cutter commands. Windows and the installed driver own device availability and configuration.
 
-The 80mm receipt includes compact monochrome branding, business address/phones/email, invoice number and timestamp, cashier, optional customer name/phone, manual items, subtotal, discount, total, complete payment summary, balance, optional order number/due date, thank-you text, and `Design & Deploy by Startek (PVT) LTD`. Reprints visibly include `REPRINT`.
+## Browser receipt workflow
 
-The browser receipt uses the dedicated transparent, solid-black asset at `public/branding/startek-print-hub-receipt.png`. The approved master asset remains unchanged. The image is centered and compact; if it cannot load, the centered `STARTEK PRINT HUB` heading remains as the printable identity fallback. Receipt text uses `Arial, Helvetica, system-ui, sans-serif`, minimal spacing, wrapped descriptions, aligned amounts, and strong black-only contrast for approximately 203 DPI output.
+Finalization validates and persists the invoice and optional payment exactly once before navigating to the persisted receipt with `?autoprint=1`. After the receipt hydrates, the marker is removed and the browser print dialog is opened once. Reloading the clean URL cannot finalize again or recreate a payment. Cancelling or closing the dialog does not change the invoice.
 
-Receipt content is generated from persisted server data, not browser-editable totals. Text is normalized to the printer-supported character set, line lengths are bounded, and user text cannot inject ESC/POS control bytes. Future raw ESC/POS output must use the XP-80T built-in font and simple normal, bold, enlarged-total, and centered-header commands; it must not depend on browser or custom fonts.
+The receipt page always shows one primary `PRINT RECEIPT` button for manual retry. Reprint first appends its audit event, then opens the original persisted invoice as a visibly marked REPRINT and invokes the same browser print workflow. Printing is output-only.
 
-## QZ Tray controls
+## 80mm receipt contract
 
-The printer phase must configure QZ certificate/signature support for silent printing, restrict allowed origins to the production domain, allow only named templates, and store terminal printer selection locally. It must provide a Settings test print, connection status, useful error messages, retry behavior that cannot duplicate invoices, and a browser print-dialog fallback.
+The named receipt print page is isolated from quotation/report A4 styles. It uses 80mm width, zero page/body margins, compact content margins, bottom spacing for usable paper handling, black text on white, and `Arial, Helvetica, system-ui, sans-serif`.
 
-Auto-cut is enabled only after validation with the installed driver/firmware. A receipt reprint audit is committed independently of whether physical printing succeeds, with print outcome metadata where practical.
+Content includes the approved transparent monochrome asset at `public/branding/startek-print-hub-receipt.png`, the always-present `STARTEK PRINT HUB` text fallback, business contact details, invoice date/time and cashier, optional customer details, wrapped manual items, quantities/unit prices/amounts, subtotal, discount, total, payment history, paid, balance, cash tender/change, linked order details, and footer. Receipts intentionally contain no QR, barcode, code placeholder, SVG, or canvas.
 
-## Windows setup checklist
+## Windows print-dialog settings
 
-1. Install the correct XP-80T Windows driver and print a Windows test page.
-2. Install QZ Tray and configure it to start with Windows.
-3. Configure the approved signing certificate and production origin.
-4. Select the exact Windows printer queue in POS Settings.
-5. Run normal, long-description, multi-payment, balance, QR, reprint, and cutter test receipts.
-6. Keep the browser print fallback documented for support.
+- Destination: the installed XP-80T or XP-80C queue.
+- Paper: driver-defined 80mm receipt paper.
+- Margins: None or Minimum, as supported.
+- Scale: 100%.
+- Headers and footers: Off.
+- Background graphics: On only if required for logo rendering.
 
-## Phase 6.5 browser and PDF output
+Browsers and drivers expose different option names; the web application cannot force every setting. Automatic cutter and feed behavior, if supported, must be enabled in Windows Printer Preferences rather than the POS.
 
-Quotation print uses route-scoped `@page quotation` at A4 portrait with 12 mm margins and keeps the approved logo, identity, customer snapshot, number/date, manual items, totals, validity, notes, and footer. Receipt/report rules cannot override it. Operators select A4 and 100% scale in the Canon G3010 dialog; browser code cannot silently force device settings.
+## Physical acceptance
 
-Authorized invoice detail pages provide a server-generated A4 PDF containing approved branding, invoice/customer/cashier/order snapshots, manual items, authoritative totals, payment history, cash tender/change, page numbering, and `Design & Deploy by Startek (PVT) LTD`. Long content paginates. Generated acceptance downloads are temporary outputs, not fixtures.
+On 13 September 2026 (Asia/Colombo), the owner confirmed all 13 mandatory browser-print and touchscreen checks passed on the real Startek Print Hub Windows touch POS with the USB-connected Xprinter XP-80T and 80mm paper. The detailed PASS matrix and the metadata available to the repository are recorded in `docs/WINDOWS_POS_SETUP.md`. Receipt QR testing is intentionally excluded by owner decision.
 
-The 80mm browser receipt now includes a dedicated transparent monochrome derivative of the approved logo, minimalist sans-serif typography, a text fallback, and persisted tender/change. “Finalize & print” uses a consumed one-use autoprint marker; normal navigation/reload does not print again. This is still browser-dialog printing, not QZ Tray, silent ESC/POS, or XP-80T integration.
+## A4 quotations, reports, and invoices
+
+Quotation print views use A4 portrait, approved branding, customer snapshots, manual lines, totals, validity, and notes. Operators select the Canon G3010, A4 paper, portrait, and 100% scale. The protected quotation PDF route generates the same persisted quotation without accepting browser totals.
+
+Reports use their own route-scoped A4 styles and formula-safe CSV exports. Authorized invoice detail pages provide a server-generated A4 PDF with branding, persisted items/totals/payment history, cash tender/change, footer, and page numbering. Receipt CSS cannot override these A4 outputs.

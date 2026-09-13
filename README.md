@@ -2,7 +2,9 @@
 
 Production-oriented, touch-first Point of Sale and print-job operations system for Startek Print Hub. The application uses Next.js App Router, TypeScript, Tailwind CSS, shadcn-style owned UI components, Prisma ORM, and PostgreSQL hosted on Supabase.
 
-Phase 6.5 hardens the accepted dashboard/reporting release before printer integration: A4 quotation isolation, branded A4 invoice PDFs, retail cash tender/change, deliberate finalize-and-print/download flows, a compact thermal-receipt treatment, a persistent collapsible sidebar, and bounded database-pool concurrency. Today’s Sales and reports remain derived from authoritative source transactions and cannot be cleared or reset. QZ Tray, physical receipt-printer integration, and backup/restore remain deferred.
+Phase 7 standardizes XP-80T/XP-80C receipt output on the browser print dialog and adds an Admin-only portable backup workflow. The deployed application renders persisted receipt data as a dedicated 80mm print document; Windows and the installed printer driver own queue selection, paper, feed, and cutter behavior. Receipts include the approved monochrome logo, authoritative payment data, and cash tender/change with no barcode or QR output. Versioned ZIP backups include business data, relational history, counts, and a SHA-256 checksum while excluding passwords, sessions, environment values, and private keys.
+
+The owner confirmed the mandatory Phase 7 physical browser-print and touchscreen checks passed on the real Startek Print Hub Windows touch POS and USB-connected Xprinter XP-80T on 13 September 2026. The hardware acceptance record is in `docs/WINDOWS_POS_SETUP.md`; Production deployment remains outside this checkpoint.
 
 ## Non-negotiable domain rule
 
@@ -39,6 +41,8 @@ For local TLS verification, download the CA certificate from the project's Datab
 
 Run `pnpm test:integration` explicitly for the development PostgreSQL suite. It checks the approved development project identity before connecting, exercises actual quotation/conversion/order/invoice/payment services and SQL constraints, and retains business-history fixtures. Constraint probes roll back. Normal `pnpm test` remains database-independent. Authenticated browser acceptance is a separate required gate before a release checkpoint.
 
+For XP-80T/XP-80C testing, install the correct Windows printer driver and select its queue in the Edge or Chrome print dialog. Use 80mm paper, 100% scale, no/minimum margins, and disable browser headers and footers. Cutter and feed options belong to Windows Printer Preferences; the POS sends no raw printer commands and cannot bypass the browser dialog. See `docs/WINDOWS_POS_SETUP.md`.
+
 Phase 3 authenticated browser acceptance was exercised against DEVELOPMENT Supabase PostgreSQL on 8 September 2026. The repeatable workflow and history-filter reset regression are recorded in `tests/browser/phase3-acceptance.md`. This does not certify production deployment or physical printer operation.
 
 Reports use inclusive `Asia/Colombo` shop dates (Monday–Sunday weeks), A4 browser print layouts, and server-generated CSV files with spreadsheet-formula injection protection. Report PDF generation is intentionally deferred because browser print and CSV cover the Phase 6 export requirement.
@@ -51,6 +55,7 @@ Invoice PDFs are generated on demand from persisted invoice, payment, order, sta
 - `docs/ARCHITECTURE.md` — system boundaries and application structure
 - `docs/DATABASE.md` — Phase 1 schema and planned domain model
 - `docs/BUSINESS_RULES.md` — financial and workflow invariants
-- `docs/PRINTING.md` — Windows, QZ Tray, ESC/POS, and XP-80T design
+- `docs/PRINTING.md` — browser printing and XP-80T/XP-80C receipt design
 - `docs/DEPLOYMENT.md` — Supabase, Vercel, migration, and recovery runbook
 - `docs/PRE_PHASE7_AUDIT.md` — Phase 6.5 scope, findings, timings, and release evidence
+- `docs/BACKUP_RESTORE.md` — portable ZIP contents, validation, restore, and managed recovery boundary

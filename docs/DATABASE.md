@@ -83,3 +83,7 @@ Create and test migrations against development first. Review generated SQL, appl
 Migration `prisma/migrations/202609120001_pre_phase7_hardening/migration.sql` adds nullable `payments.cashTendered` and `payments.changeGiven`. Its CHECK constraint permits legacy CASH rows with both absent, otherwise requires a complete, arithmetically consistent tender/change pair; non-cash rows require both absent. `payments.amount` remains the applied ledger amount.
 
 An earlier development-only revision of this migration also created `dashboard_sales_resets`. The owner withdrew that feature after the migration had been applied, so the immutable migration history is followed by a corrective drop migration. The current schema has no dashboard-reset model or table, and no cached sales total is introduced. Development updates use `prisma migrate deploy`, never schema push.
+
+## Phase 7 restore-support migration
+
+Migration `prisma/migrations/202609120003_phase7_restore_mode/migration.sql` does not add a table or application model. It replaces the two existing cash-session insertion guard functions with equivalent guards that recognize a transaction-local `app.restore_mode` flag. Only the Admin-only DEVELOPMENT restore service sets that flag, inside its serializable transaction, so historical payments, expenses, movements, and reversals can be reconstructed after full package validation. Ordinary writes retain the original open-session enforcement. All previously applied migration files remain immutable.

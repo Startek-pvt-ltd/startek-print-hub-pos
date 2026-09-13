@@ -33,3 +33,5 @@ export function buildReceiptViewModel(invoice: PersistedInvoice, settings: { bus
     footer: "Thank You",
   };
 }
+
+export type ReceiptViewModel = ReturnType<typeof buildReceiptViewModel>;

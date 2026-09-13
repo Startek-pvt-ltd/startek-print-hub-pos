@@ -1,71 +1,92 @@
 # Windows POS Setup
 
-## Phase 6 Vercel Preview testing
+## Development Preview
 
-This setup is temporary and is only for acceptance testing against the approved DEVELOPMENT Supabase database. It is not approved for production use.
+This procedure is for acceptance testing against the approved DEVELOPMENT Supabase database. It is not a production approval.
 
 Preview URL:
 
-`https://startek-print-hub-622azeuwc-kevinmenuja11-6769s-projects.vercel.app`
+`https://startek-print-hub-py762azut-kevinmenuja11-6769s-projects.vercel.app`
 
-1. Start the Windows touch-screen POS PC.
-2. Connect it to the shop internet connection.
-3. Open an up-to-date Microsoft Edge or Google Chrome browser.
-4. Open the Preview URL above. Vercel Authentication protects this Preview; if Vercel asks for access, sign in with the authorized project-owner account. Never copy an automation-bypass token to the POS PC.
-5. When the Startek staff login appears, sign in with the development staff account. Do not save its password in the browser.
-6. Confirm the page is the development/testing Preview before entering test data.
-7. Test touch navigation in the sidebar and mobile navigation.
-8. Test POS Billing, including numeric fields, Add Item, payment controls, validation, and cancellation before finalization unless a deliberate development transaction is required.
-9. Test invoice history, invoice detail, and the browser receipt view.
-10. Test Orders list/detail, assignment, job information, and permitted workflow controls without changing retained fixtures unnecessarily.
-11. Test Quotations list/detail, A4 print view, and PDF download.
-12. Test Expenses list/detail and filters.
-13. Test Cash Register current session, history, filters, and controls without creating unnecessary drawer movements.
-14. Test Reports cards/tables, filters, A4 browser print, and CSV export.
-15. Test Settings loads correctly. Do not save changes unless the test specifically requires it.
-16. Sign out and confirm the staff login screen returns.
+1. Start the Windows touch POS and connect it to the shop internet connection.
+2. Open a current Microsoft Edge or Google Chrome browser.
+3. Open the Preview URL and complete Vercel Authentication with the authorized owner account if prompted. Never copy automation bypass tokens to the POS.
+4. Sign in with an authorized development staff account without saving its password.
+5. Confirm the page is the development/testing Preview before entering test data.
 
-### Touch acceptance checklist
+## XP-80T/XP-80C browser printing
 
-- Sidebar and navigation respond reliably to touch.
-- Buttons and primary controls are at least 48px high.
-- Numeric fields and the on-screen keyboard are usable.
-- Add Item and payment controls are usable.
-- Filters work without accidental submissions.
-- Order workflow buttons are reachable and clearly labelled.
-- Cash-register controls are reachable and clearly labelled.
-- Reports and exports are usable.
-- No horizontal layout breakage appears at the POS screen's native resolution.
+1. Connect and power on the XP-80T by USB with 80mm paper loaded.
+2. Install the correct XP-80T/XP-80C Windows driver for the exact Windows version.
+3. Open Windows Settings → Bluetooth & devices → Printers & scanners and confirm the queue appears.
+4. Print a Windows test page. Stop and correct the driver/USB connection if it fails.
+5. Open Startek POS in Edge or Chrome and sign in.
+6. Create or open a persisted invoice receipt.
+7. Press `PRINT RECEIPT`.
+8. In the browser dialog, select the installed XP-80T/XP-80C queue.
+9. Select the driver-defined 80mm receipt paper.
+10. Set margins to None or Minimum where supported.
+11. Set scale to 100% and turn browser headers and footers Off.
+12. Enable background graphics only if the logo does not otherwise render.
+13. Print and verify width, clipping, alignment, and bottom spacing.
+14. Verify the monochrome logo is clear, centered, proportioned, and background-free.
+15. Print a long-description receipt and confirm text wraps without clipping amounts.
+16. Print a many-item receipt and confirm content is complete with minimal wasted paper.
+17. Print a Rs. 940 invoice paid with Rs. 1,000 cash and confirm Rs. 940 applied, Rs. 60 change, and Rs. 0 balance.
+18. Verify partial-payment and multiple-payment receipts.
+19. Reprint and confirm REPRINT, the original invoice number, totals, and payments.
+20. Verify Finalize & print opens the dialog only after the invoice succeeds and does not duplicate records on reload.
+21. Cancel the browser dialog and confirm the invoice/payment remain unchanged; press `PRINT RECEIPT` to retry manually.
+22. If the driver supports an automatic cutter or extra feed, configure it in Windows Printer Preferences. The POS does not send raw cut/feed commands.
 
-Record the Windows version, browser/version, display resolution, scaling percentage, tester, date, and any failed step with a screenshot that contains no credentials.
+Exact dialog and driver option names vary. The web application cannot silently select a queue, paper size, margins, scale, feed, or cutter.
 
-### Optional app-like shortcut
+## Touch acceptance
 
-For Preview testing in Microsoft Edge, open **Settings and more (…) → More tools → Apps → Install this site as an app**. The installed site can be opened from `edge://apps`.
+Verify touch navigation and the complete workflow for POS entry, numeric fields, payment controls, Finalize, Print Receipt, Orders, Expenses, Cash Register, Reports, Settings → Receipt printing, and Settings → Backup & Restore. Primary controls must remain at least 48px high with no horizontal layout breakage at the native resolution/scaling.
 
-In Google Chrome, open **More (…) → Cast, save and share → Install page as app** when that option is available.
+Record PASS/FAIL for the Windows test page, one-item receipt, long description, many items, cash tender/change, partial payment, multiple payments, REPRINT, logo, finalize/autoprint, manual print, cancel safety, and touchscreen workflow. Also record Windows/browser versions, display resolution/scaling, driver/firmware, queue name, tester/date, and credential-free screenshots. Do not claim XP-80T acceptance until every mandatory physical result passes.
 
-Do not enable auto-start, kiosk mode, or production login behavior during Phase 6 Preview testing.
+## Phase 7 physical acceptance record
 
-### Receipt and printer limitations before Phase 7
+The owner confirmed physical acceptance on 13 September 2026 (Asia/Colombo) using the real Startek Print Hub Windows touch POS and its USB-connected Xprinter XP-80T with 80mm paper. Printing used the approved Windows browser print-dialog path and installed XP-80T/XP-80C driver; no QZ Tray, direct USB access, or raw ESC/POS path was used.
 
-Allowed during this test:
+| Metadata | Recorded value |
+| --- | --- |
+| Site | Startek Print Hub |
+| Test device | Real shop Windows touch POS |
+| Operating system | Microsoft Windows; exact edition/build not supplied in the owner acceptance message |
+| Browser | Windows browser print workflow; exact Edge/Chrome product and build not supplied in the owner acceptance message |
+| Display | Real POS touchscreen at its operating resolution/scaling; exact values not supplied in the owner acceptance message |
+| Printer | Xprinter XP-80T |
+| Connection | USB through the installed Windows printer driver and queue |
+| Driver / firmware | XP-80T/XP-80C-compatible Windows driver installed; exact driver and firmware versions not supplied in the owner acceptance message |
+| Queue | Installed XP-80T Windows queue; exact queue label not supplied in the owner acceptance message |
+| Paper / dialog | 80mm receipt paper, browser print dialog, receipt layout at 100% scale |
+| Tester / authority | Startek Print Hub owner |
+| Test date | 13 September 2026, Asia/Colombo |
+| Overall result | PASS |
 
-- Browser receipt view.
-- Browser print dialog when required.
-- A4 quotation print/PDF verification.
+| Mandatory physical browser-print test | Result |
+| --- | --- |
+| Windows printer test page | PASS |
+| One-item receipt | PASS |
+| Long-description receipt | PASS |
+| Many-item receipt | PASS |
+| Rs. 940 invoice / Rs. 1,000 tender / Rs. 60 change | PASS |
+| Partial payment | PASS |
+| Multiple payments | PASS |
+| REPRINT | PASS |
+| Logo | PASS |
+| Finalize → automatic browser print dialog | PASS |
+| Manual `PRINT RECEIPT` | PASS |
+| Cancel print dialog without financial mutation | PASS |
+| Windows touchscreen workflow | PASS |
 
-Not accepted or configured yet:
+Receipt QR testing is not part of acceptance because receipt QR output was removed by owner decision. The owner-confirmed PASS record certifies the physical Phase 7 browser-print workflow only; it is not a Production deployment approval.
 
-- QZ Tray.
-- XP-80T direct printing.
-- ESC/POS commands.
-- One-click silent printing.
-- QR hardware verification.
-- Automatic cutter operation.
+## Optional app-like shortcut
 
-Browser receipt printing is not final XP-80T integration. Do not configure QZ Tray or treat this Preview as production.
+In Edge use Settings and more (…) → Apps → Install this site as an app. In Chrome use More (…) → Cast, save and share → Install page as app when available. This does not change browser printing or printer security.
 
-The current browser receipt uses a system-safe sans-serif stack and a high-contrast 203-DPI-oriented logo. Phase 7 raw ESC/POS output must use the XP-80T built-in font with only simple normal, bold, enlarged-total, and centered-header formatting; arbitrary web fonts are not available to the printer.
-
-Phase 6.5 adds deliberate browser-dialog receipt printing and A4 invoice PDF download. The receipt autoprint marker is consumed once, and invoice finalization is not retried when output fails. On available Canon G3010 hardware, verify quotation/invoice output with A4 paper, portrait orientation, and 100% scale. These checks do not configure or certify the XP-80T USB printer.
+Canon G3010 quotation and invoice output remains A4 portrait at 100% scale and is not XP-80T evidence.

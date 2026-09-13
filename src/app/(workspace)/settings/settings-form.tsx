@@ -28,13 +28,13 @@ export function SettingsForm({ values, editable }: { values: SettingsInput; edit
         <Field label="Secondary phone" error={errors.phoneSecond?.message}><Input {...register("phoneSecond")} inputMode="tel" disabled={!editable} /></Field>
         <Field label="Email" error={errors.email?.message} className="sm:col-span-2"><Input {...register("email")} type="email" disabled={!editable} /></Field>
       </fieldset>
-      <fieldset className="grid gap-5 sm:grid-cols-2"><legend className="mb-5 text-lg font-black text-slate-950">Locale and receipt printer</legend>
+      <fieldset className="grid gap-5 sm:grid-cols-2"><legend className="mb-5 text-lg font-black text-slate-950">Locale and receipt</legend>
         <Field label="Currency"><Input {...register("currencyCode")} readOnly /></Field>
         <Field label="Display currency"><Input {...register("displayCurrency")} readOnly /></Field>
         <Field label="Timezone"><Input {...register("timeZone")} readOnly /></Field>
         <Field label="Receipt width"><Input {...register("receiptWidth")} readOnly /></Field>
-        <Field label="Printer model" error={errors.printerModel?.message}><Input {...register("printerModel")} disabled={!editable} /></Field>
-        <Field label="Connection"><Input {...register("printerConnection")} readOnly /></Field>
+        <input type="hidden" {...register("printerModel")} />
+        <input type="hidden" {...register("printerConnection")} />
       </fieldset>
       <fieldset className="grid gap-5 sm:grid-cols-2"><legend className="mb-5 text-lg font-black text-slate-950">Document numbering</legend>
         <Field label="Invoice prefix" error={errors.invoicePrefix?.message}><Input {...register("invoicePrefix")} disabled={!editable} /></Field>

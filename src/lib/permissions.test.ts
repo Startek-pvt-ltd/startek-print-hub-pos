@@ -55,4 +55,10 @@ describe("role permissions", () => {
     expect(hasPermission("DESIGNER", "cash-register:operate")).toBe(false);
     expect(hasPermission("PRODUCTION", "expenses:manage")).toBe(false);
   });
+
+  it("limits backup management to administrators", () => {
+    expect(hasPermission("ADMIN", "backups:manage")).toBe(true);
+    expect(hasPermission("MANAGER", "backups:manage")).toBe(false);
+    expect(hasPermission("CASHIER", "backups:manage")).toBe(false);
+  });
 });

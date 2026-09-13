@@ -2,7 +2,7 @@
 
 ## Decision
 
-The POS is a Next.js App Router application deployed to Vercel, with Supabase-hosted PostgreSQL accessed through Prisma. The Windows browser is the application client; local USB printing is a separate trusted boundary handled by QZ Tray. Vercel never connects directly to the printer.
+The POS is a Next.js App Router application deployed to Vercel, with Supabase-hosted PostgreSQL accessed through Prisma. The Windows browser is the application client and receipt-print boundary. It opens the operating-system print dialog, where the user selects the locally installed XP-80T/XP-80C queue. Vercel never connects directly to USB.
 
 ## Request flow
 
@@ -13,9 +13,9 @@ Windows Edge or Chrome
         v
 Next.js on Vercel ---- Prisma adapter ---- Supabase PostgreSQL
         |
-        | signed and sanitized print payload (future printer phase)
+        | persisted 80mm receipt document
         v
-QZ Tray on POS PC ---- ESC/POS or Windows queue ---- Xprinter XP-80T USB
+Browser print dialog ---- Windows driver/queue ---- XP-80T/XP-80C USB
 ```
 
 ## Application boundaries
@@ -73,3 +73,13 @@ ADMIN and MANAGER can open the complete reports module. Today’s Sales is the s
 The authenticated invoice PDF route reads persisted invoice/settings data and generates A4 bytes server-side. Receipt, quotation, and report print styles own route-scoped named pages; there is no global paper-size rule. Autoprint is an explicit, consumed URL marker and never runs on a normal receipt view or reload.
 
 The dashboard has no sales reset boundary, permission, action, or setting. Today’s Sales always uses valid finalized invoice records within the current Asia/Colombo day. The sidebar state is a local device preference. Chart code loads on demand, report support/data queries start together, unused report relations are skipped, and each runtime bounds PostgreSQL concurrency to five connections.
+
+## Phase 7 browser printing and portability backup
+
+The receipt route is server-first and builds its view model from the persisted invoice, payment ledger, user, order, and settings records. A narrow Client Component only consumes the explicit one-time autoprint marker and invokes `window.print()`. Manual printing uses the same button and document. Reloading cannot recreate financial records because the print route has no financial mutation.
+
+Dedicated named-page CSS constrains the receipt to 80mm without affecting A4 quotations, reports, or PDFs. The Windows browser and driver own queue selection, paper options, feed, and cutter configuration. The application does not discover printers, poll device state, access USB, or send raw printer commands.
+
+Receipt output contains no QR or barcode generation boundary. The owner-approved browser document is intentionally limited to the monochrome logo, text identity, persisted transaction details, financial summary, and footer.
+
+The backup domain creates and validates a versioned ZIP with manifest, per-table JSON, record counts, relational/financial checks, and SHA-256 integrity. Sessions and credential material are excluded. The restore route is Admin-only, DEVELOPMENT-only, confirmation-gated, and accepts only an empty business target. A serializable transaction maps existing users by email, creates unmatched historical identities disabled, restores dependency order, verifies table counts, and audits success. A transaction-local restore flag permits historic closed-drawer activity without weakening normal database triggers.

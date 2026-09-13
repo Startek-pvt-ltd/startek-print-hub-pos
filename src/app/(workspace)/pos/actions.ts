@@ -76,5 +76,5 @@ export async function reprintReceipt(invoiceId: string) {
   } catch {
     redirect(`/invoices/${parsedId.data}?error=reprint`);
   }
-  redirect(`/invoices/${invoiceId}/receipt?reprint=${result.auditId}`);
+  redirect(`/invoices/${invoiceId}/receipt?reprint=${result.auditId}&autoprint=1`);
 }

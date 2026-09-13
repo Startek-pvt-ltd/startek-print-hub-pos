@@ -6,18 +6,21 @@ const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) throw new Error("DATABASE_URL is not configured");
+  const configuredUrl = new URL(connectionString);
+  const schema = configuredUrl.searchParams.get("schema") ?? undefined;
+  configuredUrl.searchParams.delete("schema");
   const ca = process.env.SUPABASE_CA_CERT;
   // Bound per-instance concurrency so one dashboard/report fan-out cannot
   // exhaust a small transaction-pooler allocation and leave route streams open.
   let adapterConfig: ConstructorParameters<typeof PrismaPg>[0] = {
-    connectionString,
+    connectionString: configuredUrl.toString(),
     max: 5,
     connectionTimeoutMillis: 10_000,
     idleTimeoutMillis: 30_000,
   };
 
   if (ca) {
-    const url = new URL(connectionString);
+    const url = new URL(configuredUrl);
     // pg-connection-string replaces an explicit CA when sslmode is present.
     // Keep every other approved parameter and enforce verified TLS here instead.
     url.searchParams.delete("sslmode");
@@ -30,7 +33,7 @@ function createPrismaClient() {
     };
   }
 
-  return new PrismaClient({ adapter: new PrismaPg(adapterConfig) });
+  return new PrismaClient({ adapter: new PrismaPg(adapterConfig, { schema }) });
 }
 
 export const db = globalForPrisma.prisma ?? createPrismaClient();

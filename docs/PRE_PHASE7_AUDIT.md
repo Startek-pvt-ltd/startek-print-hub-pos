@@ -2,7 +2,7 @@
 
 ## Scope and boundary
 
-Phase 6.5 hardens the accepted Phase 6 system only. It does not implement QZ Tray, raw ESC/POS, XP-80T USB control, backup/restore, offline mode, inventory/catalog behavior, production database operations, or production deployment.
+Phase 6.5 hardens the accepted Phase 6 system only. It does not implement the Phase 7 receipt-printing workflow, raw printer control, backup/restore, offline mode, inventory/catalog behavior, production database operations, or production deployment.
 
 ## Findings and resolutions
 
