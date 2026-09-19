@@ -7,6 +7,7 @@ import { allocateInvoiceNumber } from "@/domain/invoice-number";
 import { assertInvoiceCanBeVoided, buildReceiptReprintAudit } from "@/domain/invoice-rules";
 import { prepareInvoicePlan } from "@/domain/invoice-plan";
 import type { InvoiceInput, BalancePaymentInput } from "@/lib/validations/invoice";
+import { assertCurrentOperationalRecord } from "@/lib/operational-period";
 
 export class InvoiceOperationError extends Error {
   constructor(public readonly code: string, message: string) {
@@ -119,6 +120,7 @@ export async function addInvoicePayment(input: BalancePaymentInput, actorId: str
   return db.$transaction(async (tx) => {
     const invoice = await tx.invoice.findUnique({ where: { id: input.invoiceId }, include: { payments: { include: { reversal: true } } } });
     if (!invoice) throw new InvoiceOperationError("NOT_FOUND", "Invoice was not found");
+    await assertCurrentOperationalRecord(tx, invoice.createdAt);
     if (invoice.status === "VOID") throw new InvoiceOperationError("INVOICE_VOID", "Payments cannot be added to a void invoice");
     const outstanding = calculateOutstanding(invoice.grandTotal.toString(), invoice.payments.map((payment) => ({ amount: payment.amount.toString(), reversed: Boolean(payment.reversal) })));
     const paymentPlan = resolvePayment(input.amount, outstanding, input.method);
@@ -149,6 +151,7 @@ export async function voidInvoiceRecord(invoiceId: string, reason: string, actor
   return db.$transaction(async (tx) => {
     const invoice = await tx.invoice.findUnique({ where: { id: invoiceId } });
     if (!invoice) throw new InvoiceOperationError("NOT_FOUND", "Invoice was not found");
+    await assertCurrentOperationalRecord(tx, invoice.createdAt);
     const cleanReason = assertInvoiceCanBeVoided(invoice.status, reason);
     const voided = await tx.invoice.update({ where: { id: invoice.id }, data: { status: "VOID", voidedAt: new Date(), voidedById: actorId, voidReason: cleanReason } });
     await tx.auditLog.create({ data: { userId: actorId, action: "INVOICE_VOIDED", entityType: "Invoice", entityId: invoice.id, metadata: { invoiceNumber: invoice.invoiceNumber, reason: cleanReason, grandTotal: invoice.grandTotal.toString() } } });
@@ -158,8 +161,9 @@ export async function voidInvoiceRecord(invoiceId: string, reason: string, actor
 
 export async function recordReceiptReprint(invoiceId: string, actorId: string) {
   return db.$transaction(async (tx) => {
-    const invoice = await tx.invoice.findUnique({ where: { id: invoiceId }, select: { id: true, invoiceNumber: true } });
+    const invoice = await tx.invoice.findUnique({ where: { id: invoiceId }, select: { id: true, invoiceNumber: true, createdAt: true } });
     if (!invoice) throw new InvoiceOperationError("NOT_FOUND", "Invoice was not found");
+    await assertCurrentOperationalRecord(tx, invoice.createdAt);
     const audit = await tx.auditLog.create({ data: buildReceiptReprintAudit(invoice, actorId) });
     return { ...invoice, auditId: audit.id };
   });

@@ -5,6 +5,7 @@ import { positiveMoney } from "@/domain/cash-register";
 import { formatBusinessNumber } from "@/domain/phase4";
 import { db } from "@/lib/db";
 import type { ExpenseInput } from "@/lib/validations/phase5";
+import { assertCurrentOperationalRecord } from "@/lib/operational-period";
 
 export class Phase5OperationError extends Error {
   constructor(public readonly code: string, message: string) {
@@ -100,6 +101,7 @@ export async function voidExpense(expenseId: string, reason: string, actorId: st
       include: { cashSession: { select: { status: true } } },
     });
     if (!expense) throw new Phase5OperationError("NOT_FOUND", "Expense was not found");
+    await assertCurrentOperationalRecord(tx, expense.createdAt);
     if (expense.status === "VOID") throw new Phase5OperationError("ALREADY_VOID", "Expense is already void");
     if (expense.cashSession?.status === "CLOSED") {
       throw new Phase5OperationError("SESSION_CLOSED", "A cash expense in a closed session cannot be changed");

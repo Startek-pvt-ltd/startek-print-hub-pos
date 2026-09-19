@@ -8,11 +8,12 @@ import { requirePermission } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { balancePaymentSchema, customerLookupSchema, invoiceInputSchema, voidInvoiceSchema } from "@/lib/validations/invoice";
 import { addInvoicePayment, createInvoice, InvoiceOperationError, recordReceiptReprint, voidInvoiceRecord } from "@/server/invoice-service";
+import { OperationalPeriodError } from "@/lib/operational-period";
 
 export type MutationState<T = never> = { error?: string; data?: T };
 
 function safeError(error: unknown) {
-  if (error instanceof FinancialRuleError || error instanceof InvoiceRuleError || error instanceof InvoiceOperationError) return error.message;
+  if (error instanceof FinancialRuleError || error instanceof InvoiceRuleError || error instanceof InvoiceOperationError || error instanceof OperationalPeriodError) return error.message;
   return "The operation could not be completed. Please try again.";
 }
 

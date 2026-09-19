@@ -75,4 +75,12 @@ All important mutations resolve their actor from the server session. Dates use t
 
 A CASH entry is tendered money, not automatically the ledger amount. Applied payment is the lesser of tendered cash and the current authoritative balance; change is tendered minus applied. Receipt and invoice PDF show all three values, but drawer receipts and paid totals use only applied Payment amounts. CARD, BANK_TRANSFER, and QR payments cannot exceed the outstanding balance.
 
-“Today’s Sales” is every valid non-VOID finalized invoice grand total in the current Asia/Colombo business day. It has no clear/reset control or cutoff and must never hide or suppress valid sales.
+“Today’s Sales” is every valid non-VOID finalized invoice grand total in the current Asia/Colombo business day and current operational period. It has no sales-clear/reset control. The ADMIN-only v1.0.1 Start Fresh boundary may archive pre-go-live/test history from normal operation, but never deletes, voids, or changes a valid invoice.
+
+## V1.0.1 maintenance rules
+
+- Start Fresh changes only the operational cutoff and writes an audit event. It never truncates or deletes business/financial/audit tables and never resets document counters.
+- An open cash session must be deliberately reconciled and closed before Start Fresh. The maintenance operation never closes it automatically.
+- Existing customer identity remains reusable by unique phone; only pre-cutoff transactional history is excluded from ordinary current-period views.
+- Archived transactions are immutable through application services. ADMIN direct inspection is audit access, not permission to mutate retained test history.
+- Staff accounts referenced by records are disabled, never deleted. At least one active ADMIN must always remain.

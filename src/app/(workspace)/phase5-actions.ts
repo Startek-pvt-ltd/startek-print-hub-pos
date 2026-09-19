@@ -6,11 +6,12 @@ import { requirePermission } from "@/lib/auth";
 import { cashMovementSchema, closeCashSessionSchema, expenseInputSchema, expenseVoidSchema, openCashSessionSchema } from "@/lib/validations/phase5";
 import { addCashMovement, closeCashSession, openCashSession } from "@/server/cash-register-service";
 import { createExpense, Phase5OperationError, voidExpense } from "@/server/expense-service";
+import { OperationalPeriodError } from "@/lib/operational-period";
 
 export type Phase5State<T = never> = { error?: string; data?: T };
 
 function safeError(error: unknown) {
-  return error instanceof Phase5OperationError || error instanceof CashRegisterRuleError
+  return error instanceof Phase5OperationError || error instanceof CashRegisterRuleError || error instanceof OperationalPeriodError
     ? error.message
     : "The operation could not be completed. Please try again.";
 }

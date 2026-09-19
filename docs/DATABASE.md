@@ -95,3 +95,7 @@ The separate Production database was initialized on 13 September 2026 in Supabas
 The resulting `public` schema contains the 19 mapped domain tables plus `_prisma_migrations`. It contains no Product, SKU, barcode, inventory-product, selector, or catalog table. One active ADMIN and the single approved settings row were created through the controlled seed. No development invoice, payment, customer, order, quotation, expense, cash-session, or counter data was copied; fresh counters remain absent until the first real numbered transaction.
 
 Production runtime uses the transaction pooler on port 6543. Controlled migration and dump operations use the IPv4 session pooler on port 5432. Passwords and full URLs remain only in managed secret storage and the owner's Keychain, never in this repository. Production must never use `prisma migrate dev`, `prisma migrate reset`, `prisma db push`, table truncation, or manual counter edits.
+
+## V1.0.1 additive migration
+
+Migration `202609190001_add_operational_data_start` is the tenth immutable migration and adds nullable `settings.operationalDataStartAt TIMESTAMP(3)`. Null means all retained history is operationally visible; a UTC timestamp archives older operational records from normal views without deleting them. It adds no cascade, trigger, reset table, product model, or counter change. The migration is applied and verified in DEVELOPMENT only until the controlled v1.0.1 Production deployment gate is approved; the Phase 8 Production record above remains the currently released nine-migration state.

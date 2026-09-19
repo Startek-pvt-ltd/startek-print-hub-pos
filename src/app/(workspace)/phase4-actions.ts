@@ -9,9 +9,10 @@ import { assignmentSchema, conversionSchema, invoiceFromOrderSchema, orderEditSc
 import { Phase4OperationError, changeQuotationStatus, convertQuotation, createQuotation, editQuotation } from "@/server/quotation-service";
 import { assignOrder, changeOrderStatus, createInvoiceFromOrder, editOrder } from "@/server/order-service";
 import { InvoiceOperationError } from "@/server/invoice-service";
+import { OperationalPeriodError } from "@/lib/operational-period";
 
 export type Phase4State<T = never> = { error?: string; data?: T };
-function safe(error: unknown) { return error instanceof FinancialRuleError || error instanceof Phase4RuleError || error instanceof Phase4OperationError || error instanceof InvoiceOperationError ? error.message : "The operation could not be completed. Please try again."; }
+function safe(error: unknown) { return error instanceof FinancialRuleError || error instanceof Phase4RuleError || error instanceof Phase4OperationError || error instanceof InvoiceOperationError || error instanceof OperationalPeriodError ? error.message : "The operation could not be completed. Please try again."; }
 
 export async function saveQuotation(input: unknown): Promise<Phase4State<{ id: string }>> {
   const user = await requirePermission("quotations:manage"); const parsed = quotationInputSchema.safeParse(input);

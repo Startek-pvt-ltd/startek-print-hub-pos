@@ -12,12 +12,14 @@ import { db } from "@/lib/db";
 import { hasPermission } from "@/lib/permissions";
 import { getOpenCashSession } from "@/server/cash-register-service";
 import { CashRegisterControls } from "./cash-register-controls";
+import { effectiveOperationalStart, getOperationalDataStartAt } from "@/lib/operational-period";
 
 export default async function CashRegisterPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const user = await requirePermission("cash-register:operate"); const raw = await searchParams; const value = (key: string) => typeof raw[key] === "string" ? raw[key] : "";
+  const user = await requirePermission("cash-register:operate"); const [raw, cutoff] = await Promise.all([searchParams, getOperationalDataStartAt()]); const value = (key: string) => typeof raw[key] === "string" ? raw[key] : "";
   const status = (["OPEN", "CLOSED"] as CashSessionStatus[]).includes(value("status") as CashSessionStatus) ? value("status") as CashSessionStatus : undefined;
   const date = /^\d{4}-\d{2}-\d{2}$/.test(value("date")) ? value("date") : "";
-  const where: Prisma.CashSessionWhereInput = { status, openedAt: date ? { gte: new Date(`${date}T00:00:00+05:30`), lte: new Date(`${date}T23:59:59.999+05:30`) } : undefined };
+  const requestedFrom = date ? new Date(`${date}T00:00:00+05:30`) : undefined; const effectiveFrom = cutoff ? effectiveOperationalStart(requestedFrom ?? new Date(0), cutoff) : requestedFrom;
+  const where: Prisma.CashSessionWhereInput = { status, openedAt: effectiveFrom || date ? { gte: effectiveFrom, lte: date ? new Date(`${date}T23:59:59.999+05:30`) : undefined } : undefined };
   const [active, history] = await Promise.all([getOpenCashSession(), db.cashSession.findMany({ where, include: { openedBy: { select: { name: true } }, closedBy: { select: { name: true } } }, orderBy: { openedAt: "desc" }, take: 100 })]);
   const activity = active ? await Promise.all([db.payment.findMany({ where: { cashSessionId: active.session.id }, include: { invoice: { select: { invoiceNumber: true } }, reversal: true }, orderBy: { createdAt: "desc" }, take: 8 }), db.expense.findMany({ where: { cashSessionId: active.session.id }, orderBy: { createdAt: "desc" }, take: 8 }), db.cashMovement.findMany({ where: { cashSessionId: active.session.id }, orderBy: { createdAt: "desc" }, take: 8 })]) : null;
   const summary = active?.summary;

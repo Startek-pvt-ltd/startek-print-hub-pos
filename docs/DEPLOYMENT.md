@@ -91,3 +91,9 @@ Opening: power on the Windows POS, confirm internet, open the stable Production 
 Daily use: create manual-item invoices, collect and verify payments/change, print receipts, progress Orders and Quotations, enter real Expenses, and monitor Outstanding. If connectivity fails, do not repeatedly select Finalize; verify the transaction after service returns and reconcile any manual fallback record under the shop policy.
 
 Closing: reconcile the drawer, enter actual cash, review difference, close the register, review key reports, create and verify the daily application backup, store it off the POS, and sign out. Create the weekly database dump on the scheduled day.
+
+## V1.0.1 maintenance deployment gate
+
+The maintenance code deployment and Production Start Fresh are separate changes. After review and full DEVELOPMENT acceptance: apply the tenth migration with `prisma migrate deploy`, deploy the reviewed v1.0.1 commit, and smoke-test authentication, Staff read/mutation permissions, Settings, dashboard/report queries, backup generation, receipts, and the existing Windows/XP-80T workflow. Do not use `prisma db push` and do not alter the v1.0.0 tag.
+
+Only after the owner explicitly approves the Production operation: sign in as an active ADMIN, generate and validate a fresh application ZIP, create and verify a PostgreSQL dump, store both off the POS PC, confirm no cash session is open, and execute Settings → Danger Zone → Start Fresh / Archive Test Data using `START FRESH STARTEK`. Immediately verify current-period dashboard/lists/reports, retained settings/staff/printer identity, archived-row retention, and the `START_FRESH` audit. A second cutoff requires the same complete process.

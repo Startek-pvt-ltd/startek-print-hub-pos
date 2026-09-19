@@ -3,23 +3,26 @@ import { notFound } from "next/navigation";
 import { requirePermission } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { QuotationOutputActions } from "./print-button";
+import { getOperationalDataStartAt, isArchivedOperationalRecord } from "@/lib/operational-period";
 
 export default async function QuotationPrint({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requirePermission("quotations:manage");
+  const user = await requirePermission("quotations:manage");
   const { id } = await params;
-  const [quotation, settings] = await Promise.all([
+  const [quotation, settings, cutoff] = await Promise.all([
     db.quotation.findUnique({
       where: { id },
       include: { items: { orderBy: { sortOrder: "asc" } } },
     }),
     db.setting.findUnique({ where: { id: "primary" } }),
+    getOperationalDataStartAt(),
   ]);
 
   if (!quotation) notFound();
+  if (isArchivedOperationalRecord(quotation.createdAt, cutoff) && user.role !== "ADMIN") notFound();
 
   const businessName = settings?.businessName ?? "Startek Print Hub";
   const businessAddress = settings?.address ?? "No.62 Padukka Road, Meegoda";
@@ -48,7 +51,9 @@ export default async function QuotationPrint({
           className="size-22 shrink-0 object-contain"
         />
         <div className="min-w-0">
-          <p className="text-2xl font-black tracking-tight text-blue-950">{businessName}</p>
+          <p className="text-2xl font-black tracking-tight text-blue-950">
+            {businessName}
+          </p>
           <p className="mt-1 text-sm">{businessAddress}</p>
           <p className="mt-1 text-sm">
             {businessPhones} · {businessEmail}
@@ -67,7 +72,9 @@ export default async function QuotationPrint({
           <p>{quotation.customerPhoneSnapshot}</p>
         </div>
         <div className="shrink-0 text-right">
-          <p className="text-2xl font-black tracking-wide text-blue-950">QUOTATION</p>
+          <p className="text-2xl font-black tracking-wide text-blue-950">
+            QUOTATION
+          </p>
           <p className="font-bold text-blue-950">{quotation.quotationNumber}</p>
           <p className="mt-1 text-sm">
             {new Intl.DateTimeFormat("en-LK", {
@@ -104,7 +111,11 @@ export default async function QuotationPrint({
       <div className="ml-auto mt-6 w-72 break-inside-avoid space-y-2">
         <TotalRow label="Subtotal" value={quotation.subtotal.toFixed(2)} />
         <TotalRow label="Discount" value={quotation.discount.toFixed(2)} />
-        <TotalRow label="Grand total" value={quotation.grandTotal.toFixed(2)} strong />
+        <TotalRow
+          label="Grand total"
+          value={quotation.grandTotal.toFixed(2)}
+          strong
+        />
       </div>
 
       <section className="mt-9 break-inside-avoid text-sm">

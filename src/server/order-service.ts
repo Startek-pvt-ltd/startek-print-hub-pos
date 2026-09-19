@@ -5,11 +5,13 @@ import { assertOrderTransition } from "@/domain/phase4";
 import { createInvoiceInTransaction } from "@/server/invoice-service";
 import { Phase4OperationError } from "@/server/quotation-service";
 import type { OrderEditInput } from "@/lib/validations/phase4";
+import { assertCurrentOperationalRecord } from "@/lib/operational-period";
 
 export async function changeOrderStatus(orderId: string, next: OrderStatus, note: string | null, actor: { id: string; role: Role }) {
   return db.$transaction(async (tx) => {
     const current = await tx.order.findUnique({ where: { id: orderId } });
     if (!current) throw new Phase4OperationError("NOT_FOUND", "Order was not found");
+    await assertCurrentOperationalRecord(tx, current.createdAt);
     if ((actor.role === "DESIGNER" || actor.role === "PRODUCTION") && current.assignedStaffId && current.assignedStaffId !== actor.id) throw new Phase4OperationError("NOT_ASSIGNED", "This order is assigned to another staff member");
     assertOrderTransition(current.status, next, actor.role);
     const updated = await tx.order.update({ where: { id: orderId }, data: { status: next } });
@@ -23,6 +25,7 @@ export async function assignOrder(orderId: string, assignedStaffId: string | nul
   return db.$transaction(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: orderId } });
     if (!order) throw new Phase4OperationError("NOT_FOUND", "Order was not found");
+    await assertCurrentOperationalRecord(tx, order.createdAt);
     if (order.status === "DELIVERED" || order.status === "CANCELLED") throw new Phase4OperationError("TERMINAL_ORDER", "A terminal order cannot be reassigned");
     if (assignedStaffId && !await tx.user.findFirst({ where: { id: assignedStaffId, status: "ACTIVE" } })) throw new Phase4OperationError("INVALID_STAFF", "Select an active staff member");
     const updated = await tx.order.update({ where: { id: orderId }, data: { assignedStaffId } });
@@ -35,6 +38,7 @@ export async function editOrder(input: OrderEditInput, actorId: string) {
   return db.$transaction(async (tx) => {
     const order = await tx.order.findUnique({ where: { id: input.orderId }, include: { items: true } });
     if (!order) throw new Phase4OperationError("NOT_FOUND", "Order was not found");
+    await assertCurrentOperationalRecord(tx, order.createdAt);
     if (order.status === "DELIVERED" || order.status === "CANCELLED") throw new Phase4OperationError("TERMINAL_ORDER", "A terminal order cannot be edited");
     const ids = new Set(order.items.map((item) => item.id));
     if (input.items.some((item) => !ids.has(item.id))) throw new Phase4OperationError("INVALID_ITEM", "Order item does not belong to this order");
@@ -49,6 +53,7 @@ export async function createInvoiceFromOrder(orderId: string, initialPayment: st
     return await db.$transaction(async (tx) => {
       const order = await tx.order.findUnique({ where: { id: orderId }, include: { items: { orderBy: { sortOrder: "asc" } }, quotation: true, invoice: true } });
       if (!order) throw new Phase4OperationError("NOT_FOUND", "Order was not found");
+      await assertCurrentOperationalRecord(tx, order.createdAt);
       if (order.invoice) throw new Phase4OperationError("INVOICE_EXISTS", "This order already has an invoice");
       if (order.status === "CANCELLED") throw new Phase4OperationError("CANCELLED_ORDER", "A cancelled order cannot be invoiced");
       const invoice = await createInvoiceInTransaction(tx, { idempotencyKey: `order:${order.id}`, customerName: order.customerNameSnapshot, customerPhone: order.customerPhoneSnapshot, discount: order.quotation?.discount.toFixed(2) ?? "0.00", items: order.items.map((item) => ({ description: item.description, quantity: item.quantity.toString(), unitPrice: item.unitPrice.toFixed(2) })), initialPayment: initialPayment ? { amount: initialPayment, method: "CASH", reference: `Advance for ${order.orderNumber}` } : null }, actorId, order.id);

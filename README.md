@@ -2,6 +2,8 @@
 
 Production-oriented, touch-first Point of Sale and print-job operations system for Startek Print Hub. The application uses Next.js App Router, TypeScript, Tailwind CSS, shadcn-style owned UI components, Prisma ORM, and PostgreSQL hosted on Supabase.
 
+The v1.0.1 maintenance candidate adds an ADMIN-only guarded operational archive boundary and completes Staff Management. “Start Fresh / Archive Test Data” never deletes financial or audit history: it records a UTC cutoff, hides earlier operational records from ordinary dashboards/lists/reports, keeps administrator audit access read-only, preserves counters, and is blocked while the cash register is open. Staff administration uses the existing roles, bcrypt authentication, DISABLED status, session revocation, last-active-admin protection, and append-only audit events. This is a V1 maintenance release, not V2.
+
 Phase 7 standardizes XP-80T/XP-80C receipt output on the browser print dialog and adds an Admin-only portable backup workflow. The deployed application renders persisted receipt data as a dedicated 80mm print document; Windows and the installed printer driver own queue selection, paper, feed, and cutter behavior. Receipts include the approved monochrome logo, authoritative payment data, and cash tender/change with no barcode or QR output. Versioned ZIP backups include business data, relational history, counts, and a SHA-256 checksum while excluding passwords, sessions, environment values, and private keys.
 
 The owner confirmed the mandatory Phase 7 physical browser-print and touchscreen checks passed on the real Startek Print Hub Windows touch POS and USB-connected Xprinter XP-80T on 13 September 2026. The hardware acceptance record is in `docs/WINDOWS_POS_SETUP.md`.

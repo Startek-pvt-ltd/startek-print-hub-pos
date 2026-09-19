@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { calculateInvoiceTotals } from "@/domain/financial";
 import { assertQuotationEditable, assertQuotationTransition, formatBusinessNumber } from "@/domain/phase4";
 import type { ConversionInput, QuotationEditInput, QuotationInput } from "@/lib/validations/phase4";
+import { assertCurrentOperationalRecord } from "@/lib/operational-period";
 
 export class Phase4OperationError extends Error {
   constructor(public readonly code: string, message: string) { super(message); this.name = "Phase4OperationError"; }
@@ -52,6 +53,7 @@ export async function editQuotation(input: QuotationEditInput, actorId: string) 
   return db.$transaction(async (tx) => {
     const current = await tx.quotation.findUnique({ where: { id: input.quotationId } });
     if (!current) throw new Phase4OperationError("NOT_FOUND", "Quotation was not found");
+    await assertCurrentOperationalRecord(tx, current.createdAt);
     assertQuotationEditable(current.status);
     const linkedCustomer = await customer(tx, input.customerName, input.customerPhone, actorId);
     await tx.quotationItem.deleteMany({ where: { quotationId: current.id } });
@@ -65,6 +67,7 @@ export async function changeQuotationStatus(id: string, next: QuotationStatus, n
   return db.$transaction(async (tx) => {
     const current = await tx.quotation.findUnique({ where: { id } });
     if (!current) throw new Phase4OperationError("NOT_FOUND", "Quotation was not found");
+    await assertCurrentOperationalRecord(tx, current.createdAt);
     assertQuotationTransition(current.status, next, current.validUntil);
     const updated = await tx.quotation.update({ where: { id }, data: { status: next } });
     await tx.quotationStatusHistory.create({ data: { quotationId: id, previousStatus: current.status, newStatus: next, note, changedById: actorId } });
@@ -78,6 +81,7 @@ export async function convertQuotation(input: ConversionInput, actorId: string) 
     return await db.$transaction(async (tx) => {
       const quotation = await tx.quotation.findUnique({ where: { id: input.quotationId }, include: { items: { orderBy: { sortOrder: "asc" } }, order: true } });
       if (!quotation) throw new Phase4OperationError("NOT_FOUND", "Quotation was not found");
+      await assertCurrentOperationalRecord(tx, quotation.createdAt);
       if (quotation.order || quotation.status === "CONVERTED") throw new Phase4OperationError("ALREADY_CONVERTED", "Quotation has already been converted");
       assertQuotationTransition(quotation.status, "CONVERTED", quotation.validUntil);
       if (quotation.validUntil && quotation.validUntil.toISOString().slice(0, 10) < new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Colombo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())) throw new Phase4OperationError("QUOTATION_EXPIRED", "Expired quotations cannot be converted");

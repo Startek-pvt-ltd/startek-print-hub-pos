@@ -4,8 +4,9 @@ import Decimal from "decimal.js";
 import { z } from "zod";
 
 export const BACKUP_FORMAT_VERSION = 1;
-export const APPLICATION_VERSION = "0.1.0";
-export const SCHEMA_VERSION = "202609120003_phase7_restore_mode";
+export const APPLICATION_VERSION = "1.0.1";
+export const SCHEMA_VERSION = "202609190001_add_operational_data_start";
+export const LEGACY_SCHEMA_VERSION = "202609120003_phase7_restore_mode";
 
 export const backupTables = [
   "settings", "users", "numberCounters", "customers", "quotations", "quotationItems", "quotationStatusHistory",
@@ -19,10 +20,11 @@ export type BackupData = Record<BackupTable, Array<Record<string, unknown>>>;
 const manifestSchema = z.object({
   formatVersion: z.literal(BACKUP_FORMAT_VERSION),
   applicationVersion: z.string().min(1).max(40),
-  schemaVersion: z.literal(SCHEMA_VERSION),
+  schemaVersion: z.union([z.literal(SCHEMA_VERSION), z.literal(LEGACY_SCHEMA_VERSION)]),
   generatedAt: z.string().datetime(),
   generatedBy: z.object({ id: z.string().min(1), name: z.string().min(1), email: z.string().email() }),
   businessName: z.string().min(1).max(120),
+  operationalDataStartAt: z.string().datetime().nullable().optional(),
   recordCounts: z.record(z.string(), z.number().int().nonnegative()),
   checksum: z.string().regex(/^[a-f0-9]{64}$/),
   sensitive: z.literal(true),

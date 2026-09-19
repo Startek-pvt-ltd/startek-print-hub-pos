@@ -141,6 +141,7 @@ model Setting {
   orderPrefix       String   @default("SPH-ORD")
   quotePrefix       String   @default("SPH-QT")
   expensePrefix     String   @default("SPH-EXP")
+  operationalDataStartAt DateTime?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

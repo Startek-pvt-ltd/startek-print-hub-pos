@@ -53,6 +53,7 @@ export async function createBusinessBackup(actor: Actor) {
     generatedAt: new Date().toISOString(),
     generatedBy: actor,
     businessName: typeof settings?.businessName === "string" ? settings.businessName : "Startek Print Hub",
+    operationalDataStartAt: settings?.operationalDataStartAt == null ? null : String(settings.operationalDataStartAt),
     recordCounts,
     sensitive: true,
     credentialPolicy: "password-hashes-excluded",
@@ -130,7 +131,10 @@ export async function restoreBusinessBackup(bytes: Uint8Array, actor: Actor) {
 
     await tx.$executeRawUnsafe("SET LOCAL app.restore_mode = 'on'");
     for (const row of data.settings) {
-      const setting = row as Prisma.SettingCreateManyInput;
+      const setting = {
+        ...row,
+        operationalDataStartAt: row.operationalDataStartAt ? new Date(String(row.operationalDataStartAt)) : null,
+      } as Prisma.SettingCreateManyInput;
       await tx.setting.upsert({ where: { id: setting.id }, create: setting, update: setting });
     }
     for (const row of data.numberCounters) {

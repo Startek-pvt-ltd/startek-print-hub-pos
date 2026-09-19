@@ -35,3 +35,9 @@ Until then:
 The first known-good Production application backup was generated at `2026-09-13T08:27:40.804Z`: format 1, application 0.1.0, schema `202609120003_phase7_restore_mode`, manifest checksum `7999157b478aa2f70e43c6f61b7c8de61ef0574b83f3c45ce26d889873d40ed4`. Its checksum, relations, counts, and credential exclusions passed. The first PostgreSQL 17 custom-format dump passed `pg_restore --list`; its file SHA-256 is `7cfe350bfaf20d636a659edb59ae7afa984fe1520b71b6311526f631807c13e7`. Both copies are stored with owner-only permissions in the off-POS backup location.
 
 Never confirm the application restore against live Production. In an incident, stop new transactions, preserve current state/logs, validate and rehearse the chosen backup in isolation, obtain owner approval for the maintenance window, restore with the appropriate provider/application/database method, verify financial/authentication/relationship integrity, then reopen and document the incident.
+
+## V1.0.1 archive-boundary compatibility
+
+V1.0.1 application backups remain complete: records before `operationalDataStartAt` are included with every other retained historical row. The manifest records the cutoff when present and uses application `1.0.1` / schema `202609190001_add_operational_data_start`. Restore preserves that cutoff. Packages created at the accepted V1 schema `202609120003_phase7_restore_mode` remain readable and restore with a null cutoff, so the upgrade does not invalidate existing known-good V1 application backups.
+
+Immediately before a Production Start Fresh, download and validate a new application ZIP and create/verify a PostgreSQL custom-format dump. Store both off the POS PC, confirm the drawer is closed, and obtain explicit owner approval. Deployment alone must never trigger Start Fresh.

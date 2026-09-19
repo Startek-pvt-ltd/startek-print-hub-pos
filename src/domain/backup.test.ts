@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { strToU8, unzipSync, zipSync } from "fflate";
-import { APPLICATION_VERSION, assertNoBackupSecrets, backupTables, BACKUP_FORMAT_VERSION, createBackupPackage, parseBackupPackage, SCHEMA_VERSION, type BackupData } from "./backup";
+import { APPLICATION_VERSION, assertNoBackupSecrets, backupTables, BACKUP_FORMAT_VERSION, createBackupPackage, LEGACY_SCHEMA_VERSION, parseBackupPackage, SCHEMA_VERSION, type BackupData } from "./backup";
 
 function fixture(): BackupData {
   const data = Object.fromEntries(backupTables.map((table) => [table, []])) as unknown as BackupData;
@@ -40,6 +40,20 @@ describe("portable backup format", () => {
     const versionFiles = unzipSync(created.bytes);
     versionFiles["manifest.json"] = strToU8(new TextDecoder().decode(versionFiles["manifest.json"]).replace(SCHEMA_VERSION, "unsupported"));
     expect(() => parseBackupPackage(zipSync(versionFiles))).toThrow("version");
+  });
+
+  it("accepts the V1 backup schema while preserving a new operational cutoff", () => {
+    const current = packageFixture();
+    expect(parseBackupPackage(current.bytes).manifest.operationalDataStartAt).toBeUndefined();
+    const files = unzipSync(current.bytes);
+    files["manifest.json"] = strToU8(new TextDecoder().decode(files["manifest.json"]).replace(SCHEMA_VERSION, LEGACY_SCHEMA_VERSION));
+    expect(parseBackupPackage(zipSync(files)).manifest.schemaVersion).toBe(LEGACY_SCHEMA_VERSION);
+
+    const withCutoff = createBackupPackage(fixture(), {
+      ...current.manifest,
+      operationalDataStartAt: "2026-09-19T04:30:00.000Z",
+    });
+    expect(parseBackupPackage(withCutoff.bytes).manifest.operationalDataStartAt).toBe("2026-09-19T04:30:00.000Z");
   });
 
   it("rejects invalid relationships and credential material", () => {

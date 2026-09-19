@@ -3,6 +3,7 @@ import "server-only";
 import Decimal from "decimal.js";
 import type { ExpenseCategory, OrderStatus, PaymentMethod, Prisma, Role } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
+import { effectiveOperationalStart, getOperationalDataStartAt } from "@/lib/operational-period";
 import { calculateCashSummary } from "@/domain/cash-register";
 import {
   businessDateRange,
@@ -39,6 +40,8 @@ function invoiceRows(invoices: Array<{ status: "FINALIZED" | "VOID"; grandTotal:
 
 export async function getDashboardData(viewer: Viewer, now = new Date()) {
   const today = rangeFor({ preset: "today", now });
+  const cutoff = await getOperationalDataStartAt();
+  const currentStart = effectiveOperationalStart(today.start, cutoff);
   const privileged = viewer.role === "ADMIN" || viewer.role === "MANAGER";
   const financialViewer = privileged || viewer.role === "CASHIER";
   const invoiceScope = privileged ? {} : { createdById: viewer.id };
@@ -47,22 +50,23 @@ export async function getDashboardData(viewer: Viewer, now = new Date()) {
     : viewer.role === "PRODUCTION"
       ? { OR: [{ assignedStaffId: viewer.id }, { status: { in: ["APPROVED", "PRINTING", "FINISHING", "READY"] } }] }
       : {};
+  const activeOrderScope: Prisma.OrderWhereInput = { AND: [orderScope, cutoff ? { createdAt: { gte: cutoff } } : {}] };
   const year = shopDateKey(now).slice(0, 4);
   const monthKeys = Array.from({ length: 12 }, (_, index) => `${year}-${String(index + 1).padStart(2, "0")}`);
   const chartStart = new Date(`${monthKeys[0]}-01T00:00:00+05:30`);
   const [todayInvoices, todayExpenses, outstandingInvoices, orders, recentInvoices, recentPayments, recentExpenses, recentMovements, chartInvoices, pendingOrders, readyOrders, dueToday] = await Promise.all([
-    financialViewer ? db.invoice.findMany({ where: { status: "FINALIZED", createdAt: { gte: today.start, lt: today.endExclusive } }, select: { status: true, grandTotal: true, payments: { select: paymentSelect } } }) : [],
-    privileged ? db.expense.findMany({ where: { expenseDate: { gte: today.start, lt: today.endExclusive } }, select: { status: true, amount: true, category: true } }) : [],
-    financialViewer ? db.invoice.findMany({ where: { ...invoiceScope, status: "FINALIZED" }, select: { status: true, grandTotal: true, payments: { select: paymentSelect } } }) : [],
-    db.order.findMany({ where: orderScope, select: { id: true, orderNumber: true, customerNameSnapshot: true, jobName: true, status: true, dueDate: true, assignedStaff: { select: { name: true } } }, orderBy: { updatedAt: "desc" }, take: 8 }),
-    financialViewer ? db.invoice.findMany({ where: invoiceScope, select: { id: true, invoiceNumber: true, customerNameSnapshot: true, grandTotal: true, status: true, createdAt: true, createdBy: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 6 }) : [],
-    financialViewer ? db.payment.findMany({ where: { ...(privileged ? {} : { recordedById: viewer.id }), invoice: { status: "FINALIZED" }, reversal: null }, select: { id: true, amount: true, method: true, createdAt: true, recordedBy: { select: { name: true } }, invoice: { select: { id: true, invoiceNumber: true } } }, orderBy: { createdAt: "desc" }, take: 6 }) : [],
-    privileged ? db.expense.findMany({ where: { status: "FINALIZED" }, select: { id: true, expenseNumber: true, description: true, amount: true, paymentMethod: true, expenseDate: true, createdBy: { select: { name: true } } }, orderBy: { expenseDate: "desc" }, take: 6 }) : [],
-    privileged ? db.cashMovement.findMany({ select: { id: true, type: true, reason: true, amount: true, createdAt: true, createdBy: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 6 }) : [],
-    financialViewer ? db.invoice.findMany({ where: { ...invoiceScope, status: "FINALIZED", createdAt: { gte: chartStart } }, select: { grandTotal: true, createdAt: true } }) : [],
-    db.order.count({ where: { AND: [orderScope, { status: { in: ["PENDING", "DESIGNING", "WAITING_APPROVAL", "APPROVED", "PRINTING", "FINISHING"] } }] } }),
-    db.order.count({ where: { AND: [orderScope, { status: "READY" }] } }),
-    db.order.count({ where: { AND: [orderScope, { dueDate: new Date(`${today.from}T00:00:00Z`), status: { notIn: ["DELIVERED", "CANCELLED"] } }] } }),
+    financialViewer ? db.invoice.findMany({ where: { status: "FINALIZED", createdAt: { gte: currentStart, lt: today.endExclusive } }, select: { status: true, grandTotal: true, payments: { select: paymentSelect } } }) : [],
+    privileged ? db.expense.findMany({ where: { expenseDate: { gte: currentStart, lt: today.endExclusive } }, select: { status: true, amount: true, category: true } }) : [],
+    financialViewer ? db.invoice.findMany({ where: { ...invoiceScope, status: "FINALIZED", createdAt: cutoff ? { gte: cutoff } : undefined }, select: { status: true, grandTotal: true, payments: { select: paymentSelect } } }) : [],
+    db.order.findMany({ where: activeOrderScope, select: { id: true, orderNumber: true, customerNameSnapshot: true, jobName: true, status: true, dueDate: true, assignedStaff: { select: { name: true } } }, orderBy: { updatedAt: "desc" }, take: 8 }),
+    financialViewer ? db.invoice.findMany({ where: { ...invoiceScope, createdAt: cutoff ? { gte: cutoff } : undefined }, select: { id: true, invoiceNumber: true, customerNameSnapshot: true, grandTotal: true, status: true, createdAt: true, createdBy: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 6 }) : [],
+    financialViewer ? db.payment.findMany({ where: { ...(privileged ? {} : { recordedById: viewer.id }), createdAt: cutoff ? { gte: cutoff } : undefined, invoice: { status: "FINALIZED", createdAt: cutoff ? { gte: cutoff } : undefined }, reversal: null }, select: { id: true, amount: true, method: true, createdAt: true, recordedBy: { select: { name: true } }, invoice: { select: { id: true, invoiceNumber: true } } }, orderBy: { createdAt: "desc" }, take: 6 }) : [],
+    privileged ? db.expense.findMany({ where: { status: "FINALIZED", expenseDate: cutoff ? { gte: cutoff } : undefined }, select: { id: true, expenseNumber: true, description: true, amount: true, paymentMethod: true, expenseDate: true, createdBy: { select: { name: true } } }, orderBy: { expenseDate: "desc" }, take: 6 }) : [],
+    privileged ? db.cashMovement.findMany({ where: { createdAt: cutoff ? { gte: cutoff } : undefined }, select: { id: true, type: true, reason: true, amount: true, createdAt: true, createdBy: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 6 }) : [],
+    financialViewer ? db.invoice.findMany({ where: { ...invoiceScope, status: "FINALIZED", createdAt: { gte: effectiveOperationalStart(chartStart, cutoff) } }, select: { grandTotal: true, createdAt: true } }) : [],
+    db.order.count({ where: { AND: [activeOrderScope, { status: { in: ["PENDING", "DESIGNING", "WAITING_APPROVAL", "APPROVED", "PRINTING", "FINISHING"] } }] } }),
+    db.order.count({ where: { AND: [activeOrderScope, { status: "READY" }] } }),
+    db.order.count({ where: { AND: [activeOrderScope, { dueDate: new Date(`${today.from}T00:00:00Z`), status: { notIn: ["DELIVERED", "CANCELLED"] } }] } }),
   ]);
   const sales = salesSummary(invoiceRows(todayInvoices));
   const expenses = expenseSummary(todayExpenses.map((expense) => ({ status: expense.status, amount: expense.amount.toString(), category: expense.category })));
@@ -92,7 +96,13 @@ export async function getDashboardData(viewer: Viewer, now = new Date()) {
 }
 
 export async function getReportData(input: RangeInput) {
-  const range = rangeFor(input);
+  const requestedRange = rangeFor(input);
+  const cutoff = await getOperationalDataStartAt();
+  const range = {
+    ...requestedRange,
+    start: effectiveOperationalStart(requestedRange.start, cutoff),
+    label: cutoff && cutoff > requestedRange.start ? `${requestedRange.label} · operational data from ${cutoff.toISOString()}` : requestedRange.label,
+  };
   const search = input.search?.trim();
   const invoiceSearch: Prisma.InvoiceWhereInput = search ? { OR: [{ invoiceNumber: { contains: search, mode: "insensitive" } }, { customerNameSnapshot: { contains: search, mode: "insensitive" } }, { customerPhoneSnapshot: { contains: search } }] } : {};
   const orderSearch: Prisma.OrderWhereInput = search ? { OR: [{ orderNumber: { contains: search, mode: "insensitive" } }, { customerNameSnapshot: { contains: search, mode: "insensitive" } }, { customerPhoneSnapshot: { contains: search } }, { jobName: { contains: search, mode: "insensitive" } }] } : {};
@@ -111,7 +121,7 @@ export async function getReportData(input: RangeInput) {
       orderBy: { expenseDate: "desc" },
     }),
     db.payment.findMany({
-      where: { createdAt: { gte: range.start, lt: range.endExclusive }, method: input.paymentMethod, recordedById: input.staff, invoice: { status: "FINALIZED" } },
+      where: { createdAt: { gte: range.start, lt: range.endExclusive }, method: input.paymentMethod, recordedById: input.staff, invoice: { status: "FINALIZED", createdAt: cutoff ? { gte: cutoff } : undefined } },
       select: { id: true, createdAt: true, amount: true, method: true, reference: true, reversal: { select: { id: true } }, recordedBy: { select: { id: true, name: true, role: true } }, invoice: { select: { id: true, invoiceNumber: true } } },
       orderBy: { createdAt: "desc" },
     }),

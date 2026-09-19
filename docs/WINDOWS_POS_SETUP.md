@@ -137,3 +137,7 @@ Automated HTTPS, ADMIN login/logout, secure-cookie, route, Settings, Reports CSV
 | Real opening cash / register reconciliation and close | PASS |
 
 On 19 September 2026, the owner also reported all workflows operating correctly after go-live. The Production function region was then moved from Washington (`iad1`) to Mumbai (`bom1`) to reduce click-to-render latency without changing financial behavior or the printing boundary.
+
+## V1.0.1 Windows maintenance acceptance (pending Production deployment)
+
+On the real touchscreen, ADMIN must verify the 48px Staff and Danger Zone controls, create one temporary CASHIER, sign in as that CASHIER, confirm permitted POS access and denial of Staff mutation/Start Fresh, then sign back in as ADMIN and disable the test account. Disabled login must fail and the test account must not remain active. Start Fresh must be checked only after the backup/dump and closed-register gate; it must not be executed merely to test the UI. Re-run a normal and REPRINT XP-80T receipt to prove the maintenance release did not regress browser printing. Record metadata and PASS/FAIL here only after the owner performs these Production checks.

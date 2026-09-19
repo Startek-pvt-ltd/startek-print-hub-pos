@@ -37,6 +37,15 @@ Reports cover daily/weekly/monthly/custom sales, expenses and categories, operat
 
 Staff roles are ADMIN, MANAGER, CASHIER, DESIGNER, and PRODUCTION. All authorization is enforced on the server. Passwords and session tokens are stored only as hashes. Important actions create append-only audit entries, including login, invoice/payment creation, void, receipt reprint, quotation conversion, order status change, expenses, register open/close, settings, and backup/restore.
 
+## V1.0.1 maintenance acceptance
+
+- Settings exposes “Start Fresh / Archive Test Data” only to ADMIN. Exact phrase and backup confirmation are required, an open cash session blocks execution, and every successful cutoff change is transactional and audited with previous/new timestamps.
+- The cutoff is a visibility boundary, never a delete. Earlier invoices, payments, orders, quotations, expenses, cash sessions, movements, histories, and audit rows remain in PostgreSQL and in full backups. Business-number counters continue unchanged.
+- Normal dashboards, operational lists, customer/report history, outstanding balances, charts, and cash-session history exclude records before the cutoff. ADMIN may directly inspect retained records with an archived/read-only warning; ordinary users cannot operate on them.
+- ADMIN can create, edit, enable/disable, and reset passwords for staff in the five canonical roles. MANAGER has read-only Staff access. Other roles retain the existing permission map.
+- Passwords are bcrypt-hashed and never displayed or audited. Disabling or resetting an account revokes its sessions. Staff records are disabled rather than deleted, self-disable is rejected, and at least one active ADMIN must remain.
+- Production deployment and Production Start Fresh are separate owner-controlled steps. No Production cutoff may be executed without a fresh application ZIP, verified database dump, closed register, authenticated ADMIN, and explicit owner approval.
+
 ## Phase 2 foundation acceptance
 
 - The project installs, generates Prisma Client, passes lint/type/tests/schema validation, and builds without a live database.

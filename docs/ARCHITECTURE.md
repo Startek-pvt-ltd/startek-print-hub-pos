@@ -93,3 +93,9 @@ Production Vercel Functions are pinned to Mumbai (`bom1`) beside the Mumbai Supa
 Authenticated workspace routes retain server-first authorization and fresh database reads. A route-group `loading.tsx` keeps the shared shell interactive and provides immediate accessible visual feedback while the destination Server Component renders; it does not cache or display stale financial data.
 
 V1 remains online-only. The failure boundary is browser → HTTPS/Vercel → pooled Supabase PostgreSQL; it adds no offline queue or synchronization model. Application rollback uses a compatible reviewed Vercel deployment, while database recovery uses a forward migration or a controlled restore after isolation rehearsal and owner approval.
+
+## V1.0.1 operational archive and staff boundary
+
+`Setting.operationalDataStartAt` is the single nullable UTC archive boundary. A null value keeps all history active. ADMIN Start Fresh re-reads the active actor, current setting, and primary cash-session guard inside a serializable transaction, updates only this boundary, and appends `START_FRESH`; no business row or counter is removed. Operational list/report services use the later of a requested start and the boundary. Direct pre-boundary resources are ADMIN-only, visibly archived, and their mutation services independently reject changes.
+
+Staff mutations enter through authenticated Server Actions and are repeated in the server service boundary. Creation hashes the temporary password with bcrypt cost 12. Update holds last-active-admin/self-disable invariants transactionally, uses `DISABLED` rather than deletion, and revokes sessions on disable. Password reset writes only a new hash, revokes sessions, and emits metadata with no credential material. The canonical role-permission map remains unchanged.

@@ -8,18 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/status-badge";
+import { effectiveOperationalStart, getOperationalDataStartAt } from "@/lib/operational-period";
 
 type Search = { q?: string; status?: string; payment?: string; from?: string; to?: string };
 
 export default async function InvoiceListPage({ searchParams }: { searchParams: Promise<Search> }) {
   await requirePermission("invoices:view");
-  const filters = await searchParams;
+  const [filters, cutoff] = await Promise.all([searchParams, getOperationalDataStartAt()]);
   const fromDate = parseDate(filters.from, false);
   const toDate = parseDate(filters.to, true);
+  const effectiveFrom = cutoff ? effectiveOperationalStart(fromDate ?? new Date(0), cutoff) : fromDate;
   const invoices = await db.invoice.findMany({
     where: {
       status: filters.status === "FINALIZED" || filters.status === "VOID" ? filters.status : undefined,
-      createdAt: fromDate || toDate ? { gte: fromDate, lte: toDate } : undefined,
+      createdAt: effectiveFrom || toDate ? { gte: effectiveFrom, lte: toDate } : undefined,
       OR: filters.q ? [
         { invoiceNumber: { contains: filters.q, mode: "insensitive" } },
         { customerNameSnapshot: { contains: filters.q, mode: "insensitive" } },
