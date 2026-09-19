@@ -90,3 +90,50 @@ Receipt QR testing is not part of acceptance because receipt QR output was remov
 In Edge use Settings and more (…) → Apps → Install this site as an app. In Chrome use More (…) → Cast, save and share → Install page as app when available. This does not change browser printing or printer security.
 
 Canon G3010 quotation and invoice output remains A4 portrait at 100% scale and is not XP-80T evidence.
+
+## Production Windows go-live
+
+Production URL:
+
+`https://startek-print-hub-pos.vercel.app`
+
+1. Remove or clearly relabel the old Preview shortcut; do not use Preview for real transactions.
+2. Open the Production URL in current Edge or Chrome and verify HTTPS before signing in.
+3. Install/update the site app or shortcut so Start, taskbar, and desktop entries point to Production.
+4. Confirm the XP-80T queue and Windows test page, then use the existing 80mm, 100%, no-header/footer settings.
+5. Sign in with the production ADMIN, verify navigation and settings, and deliberately open the first register with actual opening cash.
+6. Complete the production acceptance matrix below. Do not fabricate unnecessary records or leave a fake cash session open.
+7. If a controlled invoice is created, retain it or use the authorized void workflow with reason `Production go-live test`; never delete it.
+
+## Phase 8 production acceptance record
+
+Automated HTTPS, ADMIN login/logout, secure-cookie, route, Settings, Reports CSV, backup-validation, migration, and connection checks passed on 13 September 2026. On 14 September 2026, the owner confirmed every mandatory Production check below passed on the real Startek Print Hub Windows touch POS and USB-connected Xprinter XP-80T. Exact Windows/browser/display/driver versions were not supplied; the accepted device, browser-print path, and hardware are the same shop equipment certified during Phase 7.
+
+| Production metadata | Recorded value |
+| --- | --- |
+| Site / operator | Startek Print Hub / owner |
+| Test device | Real shop Windows touch POS |
+| Operating system | Microsoft Windows; exact edition/build not supplied |
+| Browser | Current Windows Edge/Chrome browser-print workflow; exact build not supplied |
+| Display | Shop touchscreen at its operating resolution/scaling; exact values not supplied |
+| Printer / connection | Xprinter XP-80T, USB through the installed Windows queue |
+| Driver / firmware | XP-80T/XP-80C-compatible Windows driver; exact versions not supplied |
+| Paper / dialog | 80mm receipt paper, 100% scale, headers/footers off |
+| Test date | 14 September 2026, Asia/Colombo |
+| Overall result | PASS |
+
+| Production physical test | Current result |
+| --- | --- |
+| Production URL replaces Preview shortcut | PASS |
+| HTTPS and production ADMIN login on Windows | PASS |
+| Windows XP-80T test page | PASS |
+| One-item production receipt | PASS |
+| Long-description and many-item receipts | PASS |
+| Cash tender/change, partial, and multiple payments | PASS |
+| REPRINT, logo, 80mm alignment, and no receipt QR | PASS |
+| Finalize → automatic browser print dialog | PASS |
+| Manual `PRINT RECEIPT` and cancelled-dialog safety | PASS |
+| Touchscreen workflow and production navigation | PASS |
+| Real opening cash / register reconciliation and close | PASS |
+
+On 19 September 2026, the owner also reported all workflows operating correctly after go-live. The Production function region was then moved from Washington (`iad1`) to Mumbai (`bom1`) to reduce click-to-render latency without changing financial behavior or the printing boundary.

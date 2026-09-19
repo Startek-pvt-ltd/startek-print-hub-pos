@@ -87,3 +87,11 @@ An earlier development-only revision of this migration also created `dashboard_s
 ## Phase 7 restore-support migration
 
 Migration `prisma/migrations/202609120003_phase7_restore_mode/migration.sql` does not add a table or application model. It replaces the two existing cash-session insertion guard functions with equivalent guards that recognize a transaction-local `app.restore_mode` flag. Only the Admin-only DEVELOPMENT restore service sets that flag, inside its serializable transaction, so historical payments, expenses, movements, and reversals can be reconstructed after full package validation. Ordinary writes retain the original open-session enforcement. All previously applied migration files remain immutable.
+
+## Phase 8 production initialization
+
+The separate Production database was initialized on 13 September 2026 in Supabase project `napooftvnywigvqblodn`, Mumbai (`ap-south-1`), PostgreSQL 17.6. The target was verified empty before `prisma migrate deploy`. All nine accepted migrations finished successfully; Prisma reports no pending migrations, and the nine stored migration checksums match the committed SQL files.
+
+The resulting `public` schema contains the 19 mapped domain tables plus `_prisma_migrations`. It contains no Product, SKU, barcode, inventory-product, selector, or catalog table. One active ADMIN and the single approved settings row were created through the controlled seed. No development invoice, payment, customer, order, quotation, expense, cash-session, or counter data was copied; fresh counters remain absent until the first real numbered transaction.
+
+Production runtime uses the transaction pooler on port 6543. Controlled migration and dump operations use the IPv4 session pooler on port 5432. Passwords and full URLs remain only in managed secret storage and the owner's Keychain, never in this repository. Production must never use `prisma migrate dev`, `prisma migrate reset`, `prisma db push`, table truncation, or manual counter edits.

@@ -19,3 +19,19 @@ Before a real recovery, preserve the damaged environment, validate the archive i
 ## Level 2 — Supabase managed recovery
 
 Supabase managed backups and point-in-time recovery, where available, are the primary database disaster-recovery layer. The application ZIP is portable business data, not a PostgreSQL physical backup. Actual retention, PITR granularity, restore procedures, and plan availability can change; verify them in the selected Supabase project's current plan and documentation before Production launch. Rehearse recovery outside Production and record evidence.
+
+## Phase 8 Production recovery status
+
+The Production project `napooftvnywigvqblodn` is temporarily on Supabase Free/Nano. The dashboard confirmed on 13 September 2026 that scheduled backups are unavailable, retention is zero, PITR is disabled/unavailable, and an inactive Free project may pause. The owner explicitly accepted these as temporary operational risks. A paid plan should be approved when managed recovery and non-pausing availability are required.
+
+Until then:
+
+- Generate and validate an application ZIP at every daily closing and before deployments or migrations.
+- Create and verify a PostgreSQL 17 custom-format dump at least weekly and before migrations.
+- Keep both in an encrypted, restricted, owner-controlled location off the Windows POS.
+- Retain sufficient dated generations for incident rollback; never overwrite the only known-good copy.
+- Periodically run read-only package parsing/checksum and `pg_restore --list` checks. Rehearse restores only in an isolated non-production project.
+
+The first known-good Production application backup was generated at `2026-09-13T08:27:40.804Z`: format 1, application 0.1.0, schema `202609120003_phase7_restore_mode`, manifest checksum `7999157b478aa2f70e43c6f61b7c8de61ef0574b83f3c45ce26d889873d40ed4`. Its checksum, relations, counts, and credential exclusions passed. The first PostgreSQL 17 custom-format dump passed `pg_restore --list`; its file SHA-256 is `7cfe350bfaf20d636a659edb59ae7afa984fe1520b71b6311526f631807c13e7`. Both copies are stored with owner-only permissions in the off-POS backup location.
+
+Never confirm the application restore against live Production. In an incident, stop new transactions, preserve current state/logs, validate and rehearse the chosen backup in isolation, obtain owner approval for the maintenance window, restore with the appropriate provider/application/database method, verify financial/authentication/relationship integrity, then reopen and document the incident.

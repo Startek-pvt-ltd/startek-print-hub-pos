@@ -107,3 +107,15 @@ Staff roles are ADMIN, MANAGER, CASHIER, DESIGNER, and PRODUCTION. All authoriza
 - Upload performs read-only checksum/version/relation/financial validation and count preview. Restore requires a separate confirmation, the approved DEVELOPMENT environment, and an empty target; it runs in one serializable transaction, verifies counts, and audits success.
 - Supabase managed backup/PITR, when included in the selected plan, remains the primary database recovery mechanism and must be verified before Production launch.
 - The owner confirmed all mandatory physical browser-print and touchscreen checks passed on 13 September 2026 using the real Startek Print Hub Windows touch POS and USB-connected Xprinter XP-80T. `docs/WINDOWS_POS_SETUP.md` is the acceptance record; this does not authorize Production deployment.
+
+## Phase 8 production and V1 acceptance
+
+- Production uses a new Supabase project in Mumbai and never reuses the development project. Vercel Production and Preview retain separate environment scopes.
+- All nine immutable migrations must be applied with `prisma migrate deploy`, report matching checksums and no pending migration, and preserve a schema without product/SKU/catalog tables.
+- Exactly one controlled initial ADMIN is seeded with an owner-supplied production-only password. Seed credentials never remain in Vercel or source.
+- Production requires valid HTTPS, secure/HttpOnly/SameSite=Lax 12-hour sessions, protected-route redirects, server permissions, safe errors, and secret-free client/runtime output.
+- The stable Production URL must replace Preview on the real Windows POS. XP-80T printing, touchscreen operation, one controlled receipt journey, register reconciliation, and daily opening/closing procedure must pass on the shop hardware.
+- Free-plan recovery limitations are an owner-accepted temporary risk. Daily verified application ZIPs and weekly verified PostgreSQL dumps are mandatory off-POS until managed backups/PITR and non-pausing availability are approved.
+- Live Production restore is prohibited for acceptance. Recovery is rehearsed in isolation and executed in Production only during an owner-approved incident window.
+- V1 remains online-only. Staff must not repeatedly finalize during connectivity failure and must reconcile any manual fallback after service returns.
+- The owner confirmed every mandatory Production Windows, XP-80T, touchscreen, and register-reconciliation check passed on 14 September 2026. The 19 September 2026 performance correction colocates Vercel Functions with the Mumbai database and preserves fresh server-authoritative rendering.

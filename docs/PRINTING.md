@@ -44,3 +44,9 @@ On 13 September 2026 (Asia/Colombo), the owner confirmed all 13 mandatory browse
 Quotation print views use A4 portrait, approved branding, customer snapshots, manual lines, totals, validity, and notes. Operators select the Canon G3010, A4 paper, portrait, and 100% scale. The protected quotation PDF route generates the same persisted quotation without accepting browser totals.
 
 Reports use their own route-scoped A4 styles and formula-safe CSV exports. Authorized invoice detail pages provide a server-generated A4 PDF with branding, persisted items/totals/payment history, cash tender/change, footer, and page numbering. Receipt CSS cannot override these A4 outputs.
+
+## Production go-live printing
+
+The permanent shop endpoint is `https://startek-print-hub-pos.vercel.app`. The old Preview URL must not remain the daily Windows shortcut. The owner confirmed the complete Production receipt and touchscreen matrix passed on the real shop Windows POS and XP-80T on 14 September 2026: test page, one item, long description, many items, cash tender/change, partial payment, multiple payments, REPRINT, logo, automatic and manual print, cancelled-dialog safety, and touchscreen workflow.
+
+Production receipt printing remains browser-only through the XP-80T/XP-80C Windows queue. It has no QZ Tray, raw ESC/POS, direct USB, barcode, or receipt QR dependency. Any controlled go-live invoice is immutable; void it with the explicit `Production go-live test` reason if it must not remain a valid sale.

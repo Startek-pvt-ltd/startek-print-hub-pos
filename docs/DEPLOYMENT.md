@@ -49,3 +49,45 @@ Restore is Admin-only and is first rehearsed outside production. Validate backup
 Verify environment identity, ports, and ignored files before database or deployment commands. Apply the one reviewed development migration, run unit/integration suites, validate Prisma, build, complete authenticated local acceptance, scan tracked/history/worktree content for secret patterns, and deploy Preview only. Repeat the critical journey on the exact Preview URL before checkpointing. Do not use `prisma db push`, a production database, `vercel --prod`, or production promotion.
 
 Keep the runtime database connection cap aligned with the Supabase pool allocation; the application currently uses at most five connections per instance. Development Server Action diagnostics can include form arguments, so use production-mode local acceptance and rotate a development credential immediately if diagnostic output exposes it. Browser automation must wait for login-form hydration/validation before entering credentials; the form declares POST so an early native submission cannot place credentials in a URL.
+
+## Phase 8 production deployment record
+
+| Item | Production value |
+| --- | --- |
+| Deployed source | `856735b3b4030bfa0196d05d8c69fc41e34d967b` |
+| Stable URL | `https://startek-print-hub-pos.vercel.app` |
+| Initial Vercel deployment | `dpl_FuGXXdMRTkprKPheRKNJxjLRuPQB` (`READY`) |
+| Current Vercel deployment | `dpl_8s4FBWmTKeCr1sou8EWgc2Bygpkc` (`READY`) |
+| Deployment dates | Initial: 13 September 2026; Mumbai performance deployment: 19 September 2026 |
+| Supabase project | `Startek Print Hub POS — Production` (`napooftvnywigvqblodn`) |
+| Region / database | Mumbai `ap-south-1` / PostgreSQL 17.6 |
+| Migration state | 9 applied, 0 failed, 0 pending; stored checksums match source |
+| Plan / recovery | Free/Nano; no scheduled backup or PITR |
+
+Production runtime traffic uses the transaction pooler on port 6543. Controlled migration, dump, and administrative work uses the IPv4 session pooler on port 5432. `DATABASE_URL`, `DIRECT_URL`, `DATABASE_ENVIRONMENT=production`, and `SUPABASE_CA_CERT` are server-only Vercel Production values. Preview retains only development credentials. Seed credentials are absent from Vercel.
+
+Vercel Functions are configured in `vercel.json` to run in Mumbai (`bom1`), beside the Production database. Before this correction, request headers showed the edge in Mumbai forwarding dynamic work to Washington (`bom1::iad1`); the current deployment reports `bom1::bom1`. Warm unauthenticated login TTFB samples improved from approximately 0.46–0.69 seconds to approximately 0.26–0.53 seconds. Heavier authenticated pages also display the workspace loading fallback immediately rather than appearing unresponsive while fresh server data renders.
+
+The Free-plan recovery limitations and possible inactivity pausing are temporary risks explicitly accepted by the owner. Until a paid recovery plan is approved, create a verified application ZIP at every closing and before releases or migrations; create a verified PostgreSQL custom-format dump at least weekly and before migrations; retain copies in an encrypted owner-controlled location off the POS; and periodically validate both formats without restoring Production.
+
+## Production incident and recovery runbook
+
+1. Identify and timestamp the incident; record affected workflows and last known-good transaction.
+2. Stop new transactions and announce the maintenance boundary.
+3. Preserve the current database/application state and logs before changing anything.
+4. Capture a provider snapshot when the active plan supports it; otherwise create a controlled dump if the database is readable.
+5. Select a verified Supabase restore/PITR point or validated application/database backup. Never use unvalidated development data.
+6. Rehearse the selected restore against an isolated non-production project.
+7. Obtain owner approval and restore during a controlled maintenance window.
+8. Verify migration state, financial totals, payments/reversals, cash reconciliation, authentication, and invoice/order/quotation links.
+9. Reopen access, monitor errors and connections, and record the incident, evidence, decisions, and outcome.
+
+Never test the destructive application restore on live Production. Application rollback and database recovery are separate: redeploy a known-good compatible Vercel commit for an application defect; use a forward corrective migration or controlled provider/backup recovery for database defects. Never reverse financial migrations automatically.
+
+## Shop opening and closing checklist
+
+Opening: power on the Windows POS, confirm internet, open the stable Production URL, sign in, confirm the XP-80T queue is available, and deliberately open the cash register with actual opening cash.
+
+Daily use: create manual-item invoices, collect and verify payments/change, print receipts, progress Orders and Quotations, enter real Expenses, and monitor Outstanding. If connectivity fails, do not repeatedly select Finalize; verify the transaction after service returns and reconcile any manual fallback record under the shop policy.
+
+Closing: reconcile the drawer, enter actual cash, review difference, close the register, review key reports, create and verify the daily application backup, store it off the POS, and sign out. Create the weekly database dump on the scheduled day.

@@ -83,3 +83,13 @@ Dedicated named-page CSS constrains the receipt to 80mm without affecting A4 quo
 Receipt output contains no QR or barcode generation boundary. The owner-approved browser document is intentionally limited to the monochrome logo, text identity, persisted transaction details, financial summary, and footer.
 
 The backup domain creates and validates a versioned ZIP with manifest, per-table JSON, record counts, relational/financial checks, and SHA-256 integrity. Sessions and credential material are excluded. The restore route is Admin-only, DEVELOPMENT-only, confirmation-gated, and accepts only an empty business target. A serializable transaction maps existing users by email, creates unmatched historical identities disabled, restores dependency order, verifies table counts, and audits success. A transaction-local restore flag permits historic closed-drawer activity without weakening normal database triggers.
+
+## Phase 8 production topology
+
+The stable shop endpoint is `https://startek-print-hub-pos.vercel.app`, deployed from accepted commit `856735b3b4030bfa0196d05d8c69fc41e34d967b`. Vercel Production connects only to Supabase project `napooftvnywigvqblodn` in Mumbai. Vercel Preview connects only to the separate development project `fbnwigknxlapnemmmugd`; no transactional data is copied between them.
+
+Production Vercel Functions are pinned to Mumbai (`bom1`) beside the Mumbai Supabase project; static assets still use Vercel's global edge network. This removes the former `iad1` Washington-to-Mumbai database path. Runtime access uses the Supabase transaction pooler and the Prisma adapter's five-connection instance cap. Migration and administrative commands use the session pooler from a controlled trusted shell. Both connections require verified TLS. Production restore remains blocked by `DATABASE_ENVIRONMENT=production`; backup validation is non-mutating and may run in Production.
+
+Authenticated workspace routes retain server-first authorization and fresh database reads. A route-group `loading.tsx` keeps the shared shell interactive and provides immediate accessible visual feedback while the destination Server Component renders; it does not cache or display stale financial data.
+
+V1 remains online-only. The failure boundary is browser → HTTPS/Vercel → pooled Supabase PostgreSQL; it adds no offline queue or synchronization model. Application rollback uses a compatible reviewed Vercel deployment, while database recovery uses a forward migration or a controlled restore after isolation rehearsal and owner approval.

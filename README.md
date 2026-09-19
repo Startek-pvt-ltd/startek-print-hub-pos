@@ -4,7 +4,9 @@ Production-oriented, touch-first Point of Sale and print-job operations system f
 
 Phase 7 standardizes XP-80T/XP-80C receipt output on the browser print dialog and adds an Admin-only portable backup workflow. The deployed application renders persisted receipt data as a dedicated 80mm print document; Windows and the installed printer driver own queue selection, paper, feed, and cutter behavior. Receipts include the approved monochrome logo, authoritative payment data, and cash tender/change with no barcode or QR output. Versioned ZIP backups include business data, relational history, counts, and a SHA-256 checksum while excluding passwords, sessions, environment values, and private keys.
 
-The owner confirmed the mandatory Phase 7 physical browser-print and touchscreen checks passed on the real Startek Print Hub Windows touch POS and USB-connected Xprinter XP-80T on 13 September 2026. The hardware acceptance record is in `docs/WINDOWS_POS_SETUP.md`; Production deployment remains outside this checkpoint.
+The owner confirmed the mandatory Phase 7 physical browser-print and touchscreen checks passed on the real Startek Print Hub Windows touch POS and USB-connected Xprinter XP-80T on 13 September 2026. The hardware acceptance record is in `docs/WINDOWS_POS_SETUP.md`.
+
+Phase 8 deployed accepted commit `856735b3b4030bfa0196d05d8c69fc41e34d967b` to the stable Production URL `https://startek-print-hub-pos.vercel.app` on 13 September 2026. Production uses the separate Supabase project `napooftvnywigvqblodn` in Mumbai (`ap-south-1`), PostgreSQL 17.6, with all nine immutable migrations applied. The owner confirmed the Production Windows/XP-80T workflow passed on 14 September 2026. On 19 September 2026, Vercel Functions were moved from Washington (`iad1`) to Mumbai (`bom1`) beside the database and an immediate workspace loading state was added for responsive navigation. The Free plan's lack of managed backups/PITR and possible inactivity pausing are owner-accepted temporary operational risks; daily verified application ZIPs and weekly verified PostgreSQL dumps are required off the POS until the plan is upgraded.
 
 ## Non-negotiable domain rule
 
