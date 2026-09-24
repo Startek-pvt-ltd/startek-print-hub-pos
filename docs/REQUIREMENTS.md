@@ -35,15 +35,18 @@ Reports cover daily/weekly/monthly/custom sales, expenses and categories, operat
 
 ## Security and accountability
 
-Staff roles are ADMIN, MANAGER, CASHIER, DESIGNER, and PRODUCTION. All authorization is enforced on the server. Passwords and session tokens are stored only as hashes. Important actions create append-only audit entries, including login, invoice/payment creation, void, receipt reprint, quotation conversion, order status change, expenses, register open/close, settings, and backup/restore.
+Owner-facing staff roles are ADMIN and STAFF. Legacy MANAGER, CASHIER, DESIGNER, and PRODUCTION enum values remain only for backward-compatible accounts until deliberately converted. All authorization is enforced on the server. Login uses a normalized unique username, not the compatibility email. Passwords and session tokens are stored only as hashes. Important actions create append-only audit entries, including login, invoice/payment creation, void, receipt reprint, quotation conversion, order status change, expenses, register open/close, settings, and backup/restore.
 
 ## V1.0.1 maintenance acceptance
 
 - Settings exposes “Start Fresh / Archive Test Data” only to ADMIN. Exact phrase and backup confirmation are required, an open cash session blocks execution, and every successful cutoff change is transactional and audited with previous/new timestamps.
 - The cutoff is a visibility boundary, never a delete. Earlier invoices, payments, orders, quotations, expenses, cash sessions, movements, histories, and audit rows remain in PostgreSQL and in full backups. Business-number counters continue unchanged.
 - Normal dashboards, operational lists, customer/report history, outstanding balances, charts, and cash-session history exclude records before the cutoff. ADMIN may directly inspect retained records with an archived/read-only warning; ordinary users cannot operate on them.
-- ADMIN can create, edit, enable/disable, and reset passwords for staff in the five canonical roles. MANAGER has read-only Staff access. Other roles retain the existing permission map.
+- ADMIN can create, edit, enable/disable, and reset passwords for owner-facing ADMIN/STAFF accounts. The Staff screen displays Name, Username, Role, Status, Created, and Actions without exposing compatibility email or password hashes.
+- STAFF can use daily Dashboard, POS billing, invoices/payments/receipts, customer lookup, orders, quotations, ordinary expenses, the permitted cash-register workflow, and operational reports. STAFF cannot administer Staff, Settings, Backup/Restore, Start Fresh/Danger Zone, roles, other users' passwords, or system-level destructive/corrective actions.
+- Legacy roles retain their existing permissions and appear as Staff compatibility accounts. Saving one through the final role selector deliberately converts it to STAFF and revokes its sessions.
 - Passwords are bcrypt-hashed and never displayed or audited. Disabling or resetting an account revokes its sessions. Staff records are disabled rather than deleted, self-disable is rejected, and at least one active ADMIN must remain.
+- Login asks for Username and Password. “Keep me signed in on this device” defaults off; unchecked sessions last 12 hours and checked sessions last 30 days. Cookies remain HttpOnly, SameSite=Lax, and Secure in Production.
 - Production deployment and Production Start Fresh are separate owner-controlled steps. No Production cutoff may be executed without a fresh application ZIP, verified database dump, closed register, authenticated ADMIN, and explicit owner approval.
 
 ## Phase 2 foundation acceptance

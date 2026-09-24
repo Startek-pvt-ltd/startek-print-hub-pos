@@ -45,7 +45,7 @@ test("upload preview validates without modifying business records", async () => 
 
 test("restore is Admin-only by policy and refuses a non-empty target", async () => {
   expect(hasPermission("ADMIN", "backups:manage")).toBe(true);
-  for (const role of ["MANAGER", "CASHIER", "DESIGNER", "PRODUCTION"] as const) expect(hasPermission(role, "backups:manage")).toBe(false);
+  for (const role of ["STAFF", "MANAGER", "CASHIER", "DESIGNER", "PRODUCTION"] as const) expect(hasPermission(role, "backups:manage")).toBe(false);
   const backup = await createBusinessBackup(admin);
   await expect(restoreBusinessBackup(backup.bytes, admin)).rejects.toThrow("empty development business dataset");
 });

@@ -5,8 +5,9 @@ import { z } from "zod";
 
 export const BACKUP_FORMAT_VERSION = 1;
 export const APPLICATION_VERSION = "1.0.1";
-export const SCHEMA_VERSION = "202609190001_add_operational_data_start";
-export const LEGACY_SCHEMA_VERSION = "202609120003_phase7_restore_mode";
+export const SCHEMA_VERSION = "202609210001_add_username_and_staff_role";
+export const LEGACY_SCHEMA_VERSION = "202609190001_add_operational_data_start";
+export const V1_SCHEMA_VERSION = "202609120003_phase7_restore_mode";
 
 export const backupTables = [
   "settings", "users", "numberCounters", "customers", "quotations", "quotationItems", "quotationStatusHistory",
@@ -20,7 +21,7 @@ export type BackupData = Record<BackupTable, Array<Record<string, unknown>>>;
 const manifestSchema = z.object({
   formatVersion: z.literal(BACKUP_FORMAT_VERSION),
   applicationVersion: z.string().min(1).max(40),
-  schemaVersion: z.union([z.literal(SCHEMA_VERSION), z.literal(LEGACY_SCHEMA_VERSION)]),
+  schemaVersion: z.union([z.literal(SCHEMA_VERSION), z.literal(LEGACY_SCHEMA_VERSION), z.literal(V1_SCHEMA_VERSION)]),
   generatedAt: z.string().datetime(),
   generatedBy: z.object({ id: z.string().min(1), name: z.string().min(1), email: z.string().email() }),
   businessName: z.string().min(1).max(120),
@@ -131,6 +132,8 @@ function money(row: Record<string, unknown>, field: string, nonnegative = true) 
 
 export function validateFinancialIntegrity(data: BackupData) {
   uniqueField(data.users, "email"); uniqueField(data.customers, "phoneNumber");
+  const usernames = data.users.map((row) => row.username).filter((value) => value !== undefined);
+  if (usernames.length && (usernames.length !== data.users.length || usernames.some((value) => typeof value !== "string" || !/^[a-z0-9][a-z0-9._-]{2,31}$/.test(value)) || new Set(usernames).size !== usernames.length)) throw new BackupValidationError("RELATION", "Invalid or duplicate usernames were found");
   for (const [rows, field] of [[data.invoices, "invoiceNumber"], [data.invoices, "idempotencyKey"], [data.quotations, "quotationNumber"], [data.quotations, "idempotencyKey"], [data.orders, "orderNumber"], [data.expenses, "expenseNumber"], [data.expenses, "idempotencyKey"], [data.cashSessions, "idempotencyKey"], [data.cashMovements, "idempotencyKey"]] as const) uniqueField(rows, field);
   const itemGroups = new Map<string, Array<Record<string, unknown>>>();
   for (const item of data.invoiceItems) itemGroups.set(String(item.invoiceId), [...(itemGroups.get(String(item.invoiceId)) ?? []), item]);

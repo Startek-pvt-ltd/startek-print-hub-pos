@@ -2,7 +2,7 @@
 
 Production-oriented, touch-first Point of Sale and print-job operations system for Startek Print Hub. The application uses Next.js App Router, TypeScript, Tailwind CSS, shadcn-style owned UI components, Prisma ORM, and PostgreSQL hosted on Supabase.
 
-The v1.0.1 maintenance candidate adds an ADMIN-only guarded operational archive boundary and completes Staff Management. “Start Fresh / Archive Test Data” never deletes financial or audit history: it records a UTC cutoff, hides earlier operational records from ordinary dashboards/lists/reports, keeps administrator audit access read-only, preserves counters, and is blocked while the cash register is open. Staff administration uses the existing roles, bcrypt authentication, DISABLED status, session revocation, last-active-admin protection, and append-only audit events. This is a V1 maintenance release, not V2.
+The v1.0.1 maintenance candidate adds username-based login, an optional 30-day “Keep me signed in on this device” session, owner-facing ADMIN/STAFF roles, an ADMIN-only guarded operational archive boundary, and completed Staff Management. “Start Fresh / Archive Test Data” never deletes financial or audit history: it records a UTC cutoff, hides earlier operational records from ordinary dashboards/lists/reports, keeps administrator audit access read-only, preserves counters, and is blocked while the cash register is open. Staff administration uses bcrypt authentication, DISABLED status, session revocation, last-active-admin protection, and append-only audit events. This is a V1 maintenance release, not V2.
 
 Phase 7 standardizes XP-80T/XP-80C receipt output on the browser print dialog and adds an Admin-only portable backup workflow. The deployed application renders persisted receipt data as a dedicated 80mm print document; Windows and the installed printer driver own queue selection, paper, feed, and cutter behavior. Receipts include the approved monochrome logo, authoritative payment data, and cash tender/change with no barcode or QR output. Versioned ZIP backups include business data, relational history, counts, and a SHA-256 checksum while excluding passwords, sessions, environment values, and private keys.
 
@@ -22,10 +22,10 @@ Requirements: Node.js 20.19 or newer, pnpm, and a PostgreSQL database.
 2. Install packages with `pnpm install`.
 3. Generate the client with `pnpm db:generate`.
 4. Apply existing migrations with `pnpm exec prisma migrate deploy`.
-5. Set the seed administrator environment variables and run `pnpm db:seed`.
+5. Set the seed administrator environment variables, including the username, and run `pnpm db:seed`.
 6. Start development with `pnpm dev`.
 
-The administrator seed is safe to rerun: it upserts the configured email, refreshes its password hash, and ensures the account remains active with the ADMIN role. Remove seed credentials from deployment environments after initial setup.
+The administrator seed is safe to rerun: it upserts the compatibility email, normalizes the configured username (default `stadmin`), refreshes its password hash, and ensures the account remains active with the ADMIN role. Remove seed credentials from deployment environments after initial setup.
 
 Do not commit `.env` files or credentials. Use separate Supabase projects for development/staging and production.
 

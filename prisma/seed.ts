@@ -10,9 +10,10 @@ const db = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 
 async function main() {
   const email = process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();
+  const username = process.env.SEED_ADMIN_USERNAME?.trim().toLowerCase() || "stadmin";
   const password = process.env.SEED_ADMIN_PASSWORD;
   const name = process.env.SEED_ADMIN_NAME?.trim() || "Startek Administrator";
-  if (!email || !password || password.length < 12) {
+  if (!email || !/^[a-z0-9][a-z0-9._-]{2,31}$/.test(username) || !password || password.length < 12) {
     throw new Error("SEED_ADMIN_EMAIL and a SEED_ADMIN_PASSWORD of at least 12 characters are required");
   }
   const passwordHash = await hash(password, 12);
@@ -21,8 +22,8 @@ async function main() {
     db.setting.upsert({ where: { id: "primary" }, update: {}, create: { id: "primary" } }),
     db.user.upsert({
       where: { email },
-      update: { name, passwordHash, role: "ADMIN", status: "ACTIVE" },
-      create: { name, email, role: "ADMIN", passwordHash },
+      update: { name, username, passwordHash, role: "ADMIN", status: "ACTIVE" },
+      create: { name, username, email, role: "ADMIN", passwordHash },
     }),
   ]);
 }

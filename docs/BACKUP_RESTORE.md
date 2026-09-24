@@ -2,7 +2,7 @@
 
 ## Level 1 — application portability backup
 
-Settings → Backup & Restore is available only to an authenticated ADMIN. Generate creates a ZIP in memory; Download saves it to the operator's device. The archive contains `manifest.json` plus JSON files for settings, non-credential user identities/roles, counters, customers, quotations/items/history, orders/items/history, invoices/items, payments/reversals, expenses, cash sessions/movements, and audit history.
+Settings → Backup & Restore is available only to an authenticated ADMIN. Generate creates a ZIP in memory; Download saves it to the operator's device. The archive contains `manifest.json` plus JSON files for settings, non-credential user identities/usernames/roles, counters, customers, quotations/items/history, orders/items/history, invoices/items, payments/reversals, expenses, cash sessions/movements, and audit history.
 
 The manifest records format, application and schema versions, UTC generation time, actor, business name, record counts, and a SHA-256 checksum over the sorted data files. Browser sessions, session-token hashes, password hashes, database URLs, environment variables, CA material, and private keys are never exported. Unmatched user identities restore as DISABLED and require deliberate credential re-establishment.
 
@@ -38,6 +38,6 @@ Never confirm the application restore against live Production. In an incident, s
 
 ## V1.0.1 archive-boundary compatibility
 
-V1.0.1 application backups remain complete: records before `operationalDataStartAt` are included with every other retained historical row. The manifest records the cutoff when present and uses application `1.0.1` / schema `202609190001_add_operational_data_start`. Restore preserves that cutoff. Packages created at the accepted V1 schema `202609120003_phase7_restore_mode` remain readable and restore with a null cutoff, so the upgrade does not invalidate existing known-good V1 application backups.
+V1.0.1 application backups remain complete: records before `operationalDataStartAt` are included with every other retained historical row. The manifest records the cutoff when present and uses application `1.0.1` / schema `202609210001_add_username_and_staff_role`. Restore preserves that cutoff and normalized usernames. Packages created at schema `202609190001_add_operational_data_start` or the accepted V1 schema `202609120003_phase7_restore_mode` remain readable; older users without usernames receive disabled collision-safe restore identities, so the upgrade does not invalidate existing known-good V1 application backups.
 
 Immediately before a Production Start Fresh, download and validate a new application ZIP and create/verify a PostgreSQL custom-format dump. Store both off the POS PC, confirm the drawer is closed, and obtain explicit owner approval. Deployment alone must never trigger Start Fresh.

@@ -64,6 +64,10 @@ test("dashboard totals and role scopes are server-derived", async () => {
   expect(Number(admin.todaySales)).toBeGreaterThanOrEqual(1200);
   expect(Number(admin.todayExpenses)).toBeGreaterThanOrEqual(250);
   expect(admin.canViewExpenses).toBe(true);
+  const staff = await getDashboardData({ id: `staff-${run}`, role: "STAFF" });
+  expect(staff.canViewFinancials).toBe(true);
+  expect(staff.canViewExpenses).toBe(true);
+  expect(staff.todaySales).toBe(admin.todaySales);
   const cashier = await getDashboardData({ id: `unrelated-${run}`, role: "CASHIER" });
   expect(cashier.todaySales).toBe(admin.todaySales);
   const production = await getDashboardData({ id: actorId, role: "PRODUCTION" });
@@ -75,6 +79,7 @@ test("dashboard totals and role scopes are server-derived", async () => {
 test("only authorized management roles can access reports", () => {
   expect(hasPermission("ADMIN", "reports:view")).toBe(true);
   expect(hasPermission("MANAGER", "reports:view")).toBe(true);
+  expect(hasPermission("STAFF", "reports:view")).toBe(true);
   expect(hasPermission("CASHIER", "reports:view")).toBe(false);
   expect(hasPermission("DESIGNER", "reports:view")).toBe(false);
   expect(hasPermission("PRODUCTION", "reports:view")).toBe(false);

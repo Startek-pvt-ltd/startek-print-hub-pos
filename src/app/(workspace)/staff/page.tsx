@@ -9,7 +9,7 @@ import { StaffManagement } from "./staff-management";
 export default async function StaffPage() {
   const user = await requirePermission("staff:view");
   const staff = await db.user.findMany({
-    select: { id: true, name: true, email: true, role: true, status: true, createdAt: true, updatedAt: true },
+    select: { id: true, name: true, username: true, role: true, status: true, createdAt: true, updatedAt: true },
     orderBy: [{ status: "asc" }, { name: "asc" }],
   });
   const editable = hasPermission(user.role, "staff:manage");

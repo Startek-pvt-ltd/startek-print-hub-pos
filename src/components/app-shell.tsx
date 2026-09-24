@@ -7,7 +7,7 @@ import { Banknote, BarChart3, Calculator, FileText, LayoutDashboard, LogOut, Pac
 import type { Role } from "@/generated/prisma/client";
 import { logout } from "@/app/(workspace)/actions";
 import { Button } from "@/components/ui/button";
-import { hasPermission, type Permission } from "@/lib/permissions";
+import { hasPermission, ownerRoleLabel, type Permission } from "@/lib/permissions";
 import { UserMenu } from "@/components/user-menu";
 
 const navigation: Array<{ label: string; href: string; icon: typeof LayoutDashboard; permission: Permission }> = [
@@ -34,6 +34,7 @@ function serverSidebarSnapshot() { return false; }
 
 export function AppShell({ children, user }: { children: React.ReactNode; user: { name: string; role: Role } }) {
   const collapsed = useSyncExternalStore(subscribeSidebar, sidebarSnapshot, serverSidebarSnapshot);
+  const roleLabel = ownerRoleLabel(user.role);
   function toggleSidebar() {
     window.localStorage.setItem(sidebarKey, collapsed ? "expanded" : "collapsed");
     window.dispatchEvent(new Event("stph-sidebar"));
@@ -44,7 +45,7 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
         <div className="flex min-h-20 items-center justify-between px-5 lg:min-h-24 lg:justify-start lg:gap-3">
           <Image src="/brand/startek-logo.png" alt="Startek Print Hub" width={52} height={52} className="rounded-xl object-cover" />
           <div className={collapsed ? "lg:hidden" : ""}><p className="font-black tracking-wide">STARTEK</p><p className="text-xs tracking-[.22em] text-sky-300">PRINT HUB POS</p></div>
-          <span className="rounded-full bg-blue-800 px-3 py-1 text-xs font-bold lg:hidden">{user.role}</span>
+          <span className="rounded-full bg-blue-800 px-3 py-1 text-xs font-bold lg:hidden">{roleLabel}</span>
         </div>
         <nav className="flex gap-2 overflow-x-auto px-4 pb-4 lg:block lg:min-h-0 lg:flex-1 lg:space-y-1 lg:overflow-y-auto lg:pb-4" aria-label="Primary navigation">
           {navigation.filter((item) => hasPermission(user.role, item.permission)).map((item) => (
@@ -54,7 +55,7 @@ export function AppShell({ children, user }: { children: React.ReactNode; user: 
           ))}
         </nav>
         <div className="hidden shrink-0 border-t border-white/10 p-4 lg:block">
-          <div className="mb-3 flex items-center gap-3 px-2"><div className="grid size-10 shrink-0 place-items-center rounded-full bg-sky-400 font-black text-blue-950">{user.name.charAt(0)}</div><div className={`min-w-0 ${collapsed ? "hidden" : ""}`}><p className="truncate text-sm font-bold">{user.name}</p><p className="text-xs text-blue-300">{user.role}</p></div></div>
+          <div className="mb-3 flex items-center gap-3 px-2"><div className="grid size-10 shrink-0 place-items-center rounded-full bg-sky-400 font-black text-blue-950">{user.name.charAt(0)}</div><div className={`min-w-0 ${collapsed ? "hidden" : ""}`}><p className="truncate text-sm font-bold">{user.name}</p><p className="text-xs text-blue-300">{roleLabel}</p></div></div>
           <form action={logout}><Button variant="ghost" title={collapsed ? "Sign out" : undefined} className={`w-full text-blue-100 hover:bg-white/10 hover:text-white ${collapsed ? "justify-center px-0" : "justify-start"}`}><LogOut className="size-5" /> <span className={collapsed ? "sr-only" : ""}>Sign out</span></Button></form>
         </div>
       </aside>

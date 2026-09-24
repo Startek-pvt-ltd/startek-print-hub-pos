@@ -84,3 +84,6 @@ A CASH entry is tendered money, not automatically the ledger amount. Applied pay
 - Existing customer identity remains reusable by unique phone; only pre-cutoff transactional history is excluded from ordinary current-period views.
 - Archived transactions are immutable through application services. ADMIN direct inspection is audit access, not permission to mutate retained test history.
 - Staff accounts referenced by records are disabled, never deleted. At least one active ADMIN must always remain.
+- Login uses a normalized unique username. Email is retained only for compatibility and is not the employee login credential.
+- The normal session is 12 hours. “Keep me signed in on this device” is owner-approved for the dedicated Windows POS, defaults off, and expires after 30 days; logout, disable, password reset, and role change invalidate applicable sessions.
+- Owner-facing roles are ADMIN and STAFF. STAFF can perform daily shop operations but cannot administer Staff, Settings, backups/restores, Start Fresh, Danger Zone, credentials/roles, or destructive/corrective ADMIN actions. Legacy roles retain their old permissions until deliberately converted.

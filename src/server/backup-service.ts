@@ -24,7 +24,7 @@ function jsonSafe<T>(value: T): T {
 export async function createBusinessBackup(actor: Actor) {
   const data = await db.$transaction(async (tx) => jsonSafe<BackupData>({
     settings: await tx.setting.findMany(),
-    users: await tx.user.findMany({ select: { id: true, name: true, email: true, role: true, status: true, createdAt: true, updatedAt: true } }),
+    users: await tx.user.findMany({ select: { id: true, name: true, username: true, email: true, role: true, status: true, createdAt: true, updatedAt: true } }),
     numberCounters: await tx.numberCounter.findMany(),
     customers: await tx.customer.findMany(),
     quotations: await tx.quotation.findMany(),
@@ -109,8 +109,9 @@ export async function restoreBusinessBackup(bytes: Uint8Array, actor: Actor) {
     const before = await businessCounts(tx);
     if (Object.values(before).some((count) => count !== 0)) throw new Error("Restore requires an empty development business dataset");
 
-    const existingUsers = await tx.user.findMany({ select: { id: true, email: true } });
+    const existingUsers = await tx.user.findMany({ select: { id: true, email: true, username: true } });
     const byEmail = new Map(existingUsers.map((user) => [user.email.toLowerCase(), user.id]));
+    const usedUsernames = new Set(existingUsers.map((user) => user.username));
     const userIds = new Map<string, string>();
     for (const source of data.users) {
       const sourceId = String(source.id);
@@ -121,8 +122,13 @@ export async function restoreBusinessBackup(bytes: Uint8Array, actor: Actor) {
         continue;
       }
       const passwordHash = await hash(randomBytes(48).toString("base64url"), 12);
+      const candidate = typeof source.username === "string" && /^[a-z0-9][a-z0-9._-]{2,31}$/.test(source.username) ? source.username : null;
+      let username = candidate && !usedUsernames.has(candidate) ? candidate : `restored_${sourceId.replace(/[^a-zA-Z0-9]/g, "").toLowerCase().slice(-20)}`;
+      let suffix = 1;
+      while (usedUsernames.has(username)) username = `restored_${String(suffix++).padStart(2, "0")}_${sourceId.replace(/[^a-zA-Z0-9]/g, "").toLowerCase().slice(-16)}`;
+      usedUsernames.add(username);
       const created = await tx.user.create({ data: {
-        id: sourceId, name: String(source.name), email, passwordHash,
+        id: sourceId, name: String(source.name), username, email, passwordHash,
         role: source.role as Prisma.UserCreateInput["role"], status: "DISABLED",
         createdAt: new Date(String(source.createdAt)), updatedAt: new Date(String(source.updatedAt)),
       }, select: { id: true } });

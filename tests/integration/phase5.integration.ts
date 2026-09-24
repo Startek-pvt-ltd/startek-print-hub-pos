@@ -18,7 +18,8 @@ const { createInvoice, addInvoicePayment, getInvoiceById } = await import("../..
 const { createExpense, voidExpense } = await import("../../src/server/expense-service");
 const { addCashMovement, closeCashSession, getCashSessionSummary, openCashSession } = await import("../../src/server/cash-register-service");
 const { hasPermission } = await import("../../src/lib/permissions");
-const sql = new Client({ connectionString: process.env.DIRECT_URL });
+const directUrl = new URL(process.env.DIRECT_URL!); directUrl.searchParams.delete("sslmode");
+const sql = new Client({ connectionString: directUrl.toString(), ssl: process.env.SUPABASE_CA_CERT ? { ca: process.env.SUPABASE_CA_CERT, rejectUnauthorized: true } : undefined });
 let actorId: string;
 let sessionId: string;
 let cashExpenseId: string;

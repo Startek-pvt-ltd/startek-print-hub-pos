@@ -24,7 +24,7 @@ export default async function LoginPage() {
         <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-7 shadow-xl shadow-blue-950/5 sm:p-10">
           <div className="flex items-center gap-3 lg:hidden">
             <Image src="/brand/startek-logo.png" alt="Startek Print Hub" width={56} height={56} className="rounded-xl" priority />
-            <strong className="text-lg">Startek Print Hub</strong>
+            <strong className="text-lg">STARTEK PRINT HUB</strong>
           </div>
           <p className="mt-8 text-sm font-bold uppercase tracking-[.18em] text-blue-700 lg:mt-0">Staff access</p>
           <h2 className="mt-2 text-3xl font-black text-slate-950">Welcome back</h2>

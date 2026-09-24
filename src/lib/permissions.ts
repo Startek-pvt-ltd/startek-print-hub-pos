@@ -26,6 +26,12 @@ export type Permission = (typeof permissions)[number];
 
 const rolePermissions: Record<Role, ReadonlySet<Permission>> = {
   ADMIN: new Set(permissions),
+  STAFF: new Set([
+    "dashboard:view", "pos:use", "invoices:view", "payments:create", "receipts:reprint",
+    "orders:view", "orders:update-status", "orders:edit", "orders:create-invoice",
+    "quotations:manage", "quotations:convert", "expenses:manage",
+    "cash-register:operate", "reports:view",
+  ]),
   MANAGER: new Set([
     "dashboard:view", "pos:use", "orders:view", "orders:update-status", "orders:edit", "orders:assign", "orders:cancel", "orders:create-invoice",
     "quotations:manage", "quotations:convert", "expenses:manage", "cash-register:operate", "cash-register:adjust",
@@ -42,4 +48,8 @@ const rolePermissions: Record<Role, ReadonlySet<Permission>> = {
 
 export function hasPermission(role: Role, permission: Permission) {
   return rolePermissions[role].has(permission);
+}
+
+export function ownerRoleLabel(role: Role) {
+  return role === "ADMIN" ? "ADMIN" : "STAFF";
 }

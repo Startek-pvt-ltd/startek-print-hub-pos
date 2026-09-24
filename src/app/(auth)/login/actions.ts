@@ -10,7 +10,7 @@ import { loginSchema } from "@/lib/validations/auth";
 
 export type LoginState = { error?: string };
 
-// A valid bcrypt hash keeps unknown-email attempts on the same expensive path as known users.
+// A valid bcrypt hash keeps unknown-username attempts on the same expensive path as known users.
 const DUMMY_PASSWORD_HASH = "$2b$12$KIXQ4BZXzS3TO4hY1JzM9eBlbKT6GpxB4Y7q7o12jQ0YcMz8YDqZK";
 
 export async function login(input: unknown): Promise<LoginState> {
@@ -20,13 +20,13 @@ export async function login(input: unknown): Promise<LoginState> {
   const headerStore = await headers();
   const ipAddress = headerStore.get("x-forwarded-for")?.split(",")[0]?.trim();
   const user = await authenticateStaff({ ...parsed.data, ipAddress }, {
-    findUser: (email) => db.user.findUnique({ where: { email } }),
+    findUser: (username) => db.user.findUnique({ where: { username } }),
     verifyPassword: compare,
     writeAudit: (event) => db.auditLog.create({ data: event }),
     dummyPasswordHash: DUMMY_PASSWORD_HASH,
   });
 
-  if (!user) return { error: "Email or password is incorrect" };
-  await createSession(user.id);
+  if (!user) return { error: "Username or password is incorrect" };
+  await createSession(user.id, parsed.data.keepSignedIn);
   redirect("/dashboard");
 }

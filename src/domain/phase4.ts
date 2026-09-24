@@ -20,8 +20,8 @@ const orderTransitions: Record<OrderStatus, readonly OrderStatus[]> = {
 };
 
 const roleTransition: Partial<Record<OrderStatus, readonly Role[]>> = {
-  DESIGNING: ["ADMIN", "MANAGER", "DESIGNER"], WAITING_APPROVAL: ["ADMIN", "MANAGER", "DESIGNER"], APPROVED: ["ADMIN", "MANAGER", "CASHIER"],
-  PRINTING: ["ADMIN", "MANAGER", "PRODUCTION"], FINISHING: ["ADMIN", "MANAGER", "PRODUCTION"], READY: ["ADMIN", "MANAGER", "PRODUCTION"], DELIVERED: ["ADMIN", "MANAGER", "CASHIER"],
+  DESIGNING: ["ADMIN", "STAFF", "MANAGER", "DESIGNER"], WAITING_APPROVAL: ["ADMIN", "STAFF", "MANAGER", "DESIGNER"], APPROVED: ["ADMIN", "STAFF", "MANAGER", "CASHIER"],
+  PRINTING: ["ADMIN", "STAFF", "MANAGER", "PRODUCTION"], FINISHING: ["ADMIN", "STAFF", "MANAGER", "PRODUCTION"], READY: ["ADMIN", "STAFF", "MANAGER", "PRODUCTION"], DELIVERED: ["ADMIN", "STAFF", "MANAGER", "CASHIER"],
 };
 
 export function assertOrderTransition(from: OrderStatus, to: OrderStatus, role: Role) {

@@ -7,6 +7,11 @@ describe("role permissions", () => {
     expect(hasPermission("ADMIN", "backups:manage")).toBe(true);
   });
 
+  it("gives STAFF daily operations without administration or destructive controls", () => {
+    for (const permission of ["dashboard:view", "pos:use", "invoices:view", "payments:create", "orders:update-status", "quotations:manage", "expenses:manage", "cash-register:operate", "reports:view", "receipts:reprint"] as const) expect(hasPermission("STAFF", permission)).toBe(true);
+    for (const permission of ["staff:view", "staff:manage", "settings:view", "settings:manage", "backups:manage", "invoices:void", "cash-register:adjust", "orders:cancel", "audit:view"] as const) expect(hasPermission("STAFF", permission)).toBe(false);
+  });
+
   it("prevents cashiers from voiding invoices or viewing reports", () => {
     expect(hasPermission("CASHIER", "invoices:void")).toBe(false);
     expect(hasPermission("CASHIER", "reports:view")).toBe(false);

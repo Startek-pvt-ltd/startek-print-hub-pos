@@ -28,7 +28,7 @@ const { authenticateStaff } = await import("../../src/lib/auth-service");
 const run = randomUUID();
 const phoneBase = run.replaceAll("-", "").replace(/\D/g, "").padEnd(7, "1").slice(0, 7);
 const createdStaffIds: string[] = [];
-let admin: { id: string; name: string; email: string; role: "ADMIN" };
+let admin: { id: string; name: string; username: string; email: string; role: "ADMIN" };
 let previousCutoff: Date | null;
 let oldInvoiceId: string;
 let oldPaymentId: string;
@@ -46,7 +46,7 @@ async function closeAnyRegister(note: string) {
 
 beforeAll(async () => {
   const seeded = await db.user.findUniqueOrThrow({ where: { email: process.env.SEED_ADMIN_EMAIL!.trim().toLowerCase() } });
-  admin = { id: seeded.id, name: seeded.name, email: seeded.email, role: "ADMIN" };
+  admin = { id: seeded.id, name: seeded.name, username: seeded.username, email: seeded.email, role: "ADMIN" };
   previousCutoff = (await db.setting.findUniqueOrThrow({ where: { id: "primary" }, select: { operationalDataStartAt: true } })).operationalDataStartAt;
   await db.setting.update({ where: { id: "primary" }, data: { operationalDataStartAt: null } });
   await closeAnyRegister(`Closed before v1.0.1 integration ${run}`);
@@ -81,12 +81,12 @@ afterAll(async () => {
 });
 
 test("Start Fresh is role-guarded and blocked while the register is open", async () => {
-  for (const role of ["MANAGER", "CASHIER", "DESIGNER", "PRODUCTION"] as const) {
+  for (const role of ["STAFF", "MANAGER", "CASHIER", "DESIGNER", "PRODUCTION"] as const) {
     await expect(startFreshOperationalPeriod({ id: admin.id, role }, { backupConfirmed: true })).rejects.toThrow("Only an administrator");
   }
-  const manager = await createStaffAccount({ name: `Guard Manager ${run}`, email: `guard-manager-${run}@example.com`, role: "MANAGER", status: "ACTIVE", password: "Temporary#123", confirmPassword: "Temporary#123" }, admin);
-  createdStaffIds.push(manager.id);
-  await expect(startFreshOperationalPeriod({ id: manager.id, role: "ADMIN" }, { backupConfirmed: true })).rejects.toThrow("active administrator");
+  const staff = await createStaffAccount({ name: `Guard Staff ${run}`, username: `guard-${run.slice(0, 8)}`, role: "STAFF", status: "ACTIVE", password: "Temporary#123", confirmPassword: "Temporary#123" }, admin);
+  createdStaffIds.push(staff.id);
+  await expect(startFreshOperationalPeriod({ id: staff.id, role: "ADMIN" }, { backupConfirmed: true })).rejects.toThrow("active administrator");
 
   const open = await openCashSession({ idempotencyKey: randomUUID(), openingCash: "0.00" }, admin.id);
   await expect(startFreshOperationalPeriod(admin, { backupConfirmed: true })).rejects.toThrow("Close the active Cash Register session");
@@ -147,38 +147,40 @@ test("new-period records appear and business-number counters continue without du
   expect(new Set(numbers.map((row) => row.invoiceNumber)).size).toBe(numbers.length);
 });
 
-test("ADMIN manages canonical staff roles with hashed passwords, revocation, and audit", async () => {
-  const roles = ["CASHIER", "DESIGNER", "PRODUCTION", "MANAGER", "ADMIN"] as const;
+test("ADMIN manages final ADMIN/STAFF roles and normalized usernames with revocation and audit", async () => {
+  const roles = ["STAFF", "ADMIN"] as const;
   const created = [];
   for (const role of roles) {
     const password = `Temporary#${role}123`;
-    const staff = await createStaffAccount({ name: `${role} ${run}`, email: `${role.toLowerCase()}-${run}@example.com`, role, status: "ACTIVE", password, confirmPassword: password }, admin);
+    const staff = await createStaffAccount({ name: `${role} ${run}`, username: `  ${role.toLowerCase()}-${run.slice(0, 8)}  `, role, status: "ACTIVE", password, confirmPassword: password }, admin);
     createdStaffIds.push(staff.id); created.push({ ...staff, password });
   }
-  const cashier = created[0];
-  const stored = await db.user.findUniqueOrThrow({ where: { id: cashier.id } });
-  expect(stored.passwordHash).not.toContain(cashier.password);
-  expect(await compare(cashier.password, stored.passwordHash)).toBe(true);
-  await expect(createStaffAccount({ name: "Duplicate", email: cashier.email, role: "CASHIER", status: "ACTIVE", password: "Temporary#123", confirmPassword: "Temporary#123" }, admin)).rejects.toThrow("already uses");
-  for (const role of ["MANAGER", "CASHIER", "DESIGNER", "PRODUCTION"] as const) {
-    await expect(createStaffAccount({ name: "Denied", email: `denied-${role}-${run}@example.com`, role: "CASHIER", status: "ACTIVE", password: "Temporary#123", confirmPassword: "Temporary#123" }, { id: cashier.id, role })).rejects.toThrow("Only an administrator");
+  const staff = created[0];
+  const stored = await db.user.findUniqueOrThrow({ where: { id: staff.id } });
+  expect(stored.username).toBe(`staff-${run.slice(0, 8)}`);
+  expect(stored.passwordHash).not.toContain(staff.password);
+  expect(await compare(staff.password, stored.passwordHash)).toBe(true);
+  await expect(createStaffAccount({ name: "Duplicate", username: staff.username.toUpperCase(), role: "STAFF", status: "ACTIVE", password: "Temporary#123", confirmPassword: "Temporary#123" }, admin)).rejects.toThrow("already uses");
+  for (const role of ["STAFF", "MANAGER", "CASHIER", "DESIGNER", "PRODUCTION"] as const) {
+    await expect(createStaffAccount({ name: "Denied", username: `denied-${run.slice(0, 8)}`, role: "STAFF", status: "ACTIVE", password: "Temporary#123", confirmPassword: "Temporary#123" }, { id: staff.id, role })).rejects.toThrow("Only an administrator");
   }
 
-  await db.session.create({ data: { userId: cashier.id, tokenHash: randomUUID(), expiresAt: new Date(Date.now() + 60_000) } });
-  await updateStaffAccount({ id: cashier.id, name: cashier.name, role: "CASHIER", status: "DISABLED" }, admin);
-  expect(await db.session.count({ where: { userId: cashier.id } })).toBe(0);
-  const disabled = await authenticateStaff({ email: cashier.email, password: cashier.password }, {
-    findUser: (email) => db.user.findUnique({ where: { email } }), verifyPassword: compare,
+  await db.session.create({ data: { userId: staff.id, tokenHash: randomUUID(), expiresAt: new Date(Date.now() + 60_000) } });
+  await updateStaffAccount({ id: staff.id, name: staff.name, username: staff.username, role: "STAFF", status: "DISABLED" }, admin);
+  expect(await db.session.count({ where: { userId: staff.id } })).toBe(0);
+  const disabled = await authenticateStaff({ username: staff.username, password: staff.password }, {
+    findUser: (username) => db.user.findUnique({ where: { username } }), verifyPassword: compare,
     writeAudit: (event) => db.auditLog.create({ data: { ...event, entityType: "User" } }), dummyPasswordHash: stored.passwordHash,
   });
   expect(disabled).toBeNull();
 
-  const manager = created.find((row) => row.role === "MANAGER")!;
-  const oldHash = (await db.user.findUniqueOrThrow({ where: { id: manager.id } })).passwordHash;
-  await resetStaffPassword({ id: manager.id, password: "Replacement#456", confirmPassword: "Replacement#456" }, admin);
-  const newHash = (await db.user.findUniqueOrThrow({ where: { id: manager.id } })).passwordHash;
-  expect(await compare(manager.password, newHash)).toBe(false);
+  const secondAdmin = created.find((row) => row.role === "ADMIN")!;
+  const oldHash = (await db.user.findUniqueOrThrow({ where: { id: secondAdmin.id } })).passwordHash;
+  await resetStaffPassword({ id: secondAdmin.id, password: "Replacement#456", confirmPassword: "Replacement#456" }, admin);
+  const newHash = (await db.user.findUniqueOrThrow({ where: { id: secondAdmin.id } })).passwordHash;
+  expect(await compare(secondAdmin.password, newHash)).toBe(false);
   expect(await compare("Replacement#456", newHash)).toBe(true);
   expect(newHash).not.toBe(oldHash);
-  expect(await db.auditLog.count({ where: { entityId: { in: created.map((row) => row.id) }, action: { in: ["STAFF_CREATED", "STAFF_DISABLED", "STAFF_PASSWORD_RESET"] } } })).toBeGreaterThanOrEqual(7);
+  expect(await db.auditLog.count({ where: { entityId: secondAdmin.id, action: "ADMIN_PASSWORD_RESET" } })).toBeGreaterThanOrEqual(1);
+  expect(await db.auditLog.count({ where: { entityId: { in: created.map((row) => row.id) }, action: { in: ["STAFF_CREATED", "STAFF_DISABLED", "ADMIN_PASSWORD_RESET"] } } })).toBeGreaterThanOrEqual(4);
 });

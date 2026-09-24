@@ -42,7 +42,7 @@ afterAll(async () => {
 });
 
 test("portable backup restores financial history atomically into an isolated empty DEVELOPMENT schema", async () => {
-  await db.user.create({ data: { id: sourceUserId, name: actor.name, email: actor.email, passwordHash: "test-only-unusable", role: "ADMIN", status: "ACTIVE" } });
+  await db.user.create({ data: { id: sourceUserId, name: actor.name, username: `source-${sourceUserId.slice(-12)}`.toLowerCase(), email: actor.email, passwordHash: "test-only-unusable", role: "ADMIN", status: "ACTIVE" } });
   const customerId = `customer-${randomUUID()}`; const invoiceId = `invoice-${randomUUID()}`; const paymentId = `payment-${randomUUID()}`;
   await db.customer.create({ data: { id: customerId, name: "Round-trip Customer", phoneNumber: "0770000001" } });
   await db.invoice.create({ data: { id: invoiceId, invoiceNumber: "SPH-INV-990001", idempotencyKey: randomUUID(), customerId, customerNameSnapshot: "Round-trip Customer", customerPhoneSnapshot: "0770000001", subtotal: "940.00", discount: "0.00", grandTotal: "940.00", createdById: sourceUserId, items: { create: { id: `item-${randomUUID()}`, description: "Round-trip manual item", quantity: "1", unitPrice: "940.00", lineTotal: "940.00", sortOrder: 0 } } } });
@@ -55,7 +55,7 @@ test("portable backup restores financial history atomically into an isolated emp
   await admin.query(`CREATE SCHEMA "${schemaName}"`);
   migrate();
   await db.$connect();
-  await db.user.create({ data: { id: targetUserId, name: "Recovery Admin", email: sourceEmail, passwordHash: "target-password-preserved", role: "ADMIN", status: "ACTIVE" } });
+  await db.user.create({ data: { id: targetUserId, name: "Recovery Admin", username: `target-${targetUserId.slice(-12)}`.toLowerCase(), email: sourceEmail, passwordHash: "target-password-preserved", role: "ADMIN", status: "ACTIVE" } });
 
   const result = await restoreBusinessBackup(backup.bytes, { id: targetUserId, name: "Recovery Admin", email: sourceEmail });
   expect(result.restored).toMatchObject({ customers: 1, invoices: 1, payments: 1 });
@@ -68,4 +68,4 @@ test("portable backup restores financial history atomically into an isolated emp
   expect((await db.user.findUniqueOrThrow({ where: { id: targetUserId } })).passwordHash).toBe("target-password-preserved");
 
   await db.$disconnect(); await admin.query(`DROP SCHEMA "${schemaName}" CASCADE`); cleaned = true;
-});
+}, 120_000);

@@ -43,8 +43,9 @@ export async function getDashboardData(viewer: Viewer, now = new Date()) {
   const cutoff = await getOperationalDataStartAt();
   const currentStart = effectiveOperationalStart(today.start, cutoff);
   const privileged = viewer.role === "ADMIN" || viewer.role === "MANAGER";
-  const financialViewer = privileged || viewer.role === "CASHIER";
-  const invoiceScope = privileged ? {} : { createdById: viewer.id };
+  const shopOperationsViewer = privileged || viewer.role === "STAFF";
+  const financialViewer = shopOperationsViewer || viewer.role === "CASHIER";
+  const invoiceScope = shopOperationsViewer ? {} : { createdById: viewer.id };
   const orderScope: Prisma.OrderWhereInput = viewer.role === "DESIGNER"
     ? { OR: [{ assignedStaffId: viewer.id }, { status: { in: ["PENDING", "DESIGNING", "WAITING_APPROVAL"] } }] }
     : viewer.role === "PRODUCTION"
@@ -56,12 +57,12 @@ export async function getDashboardData(viewer: Viewer, now = new Date()) {
   const chartStart = new Date(`${monthKeys[0]}-01T00:00:00+05:30`);
   const [todayInvoices, todayExpenses, outstandingInvoices, orders, recentInvoices, recentPayments, recentExpenses, recentMovements, chartInvoices, pendingOrders, readyOrders, dueToday] = await Promise.all([
     financialViewer ? db.invoice.findMany({ where: { status: "FINALIZED", createdAt: { gte: currentStart, lt: today.endExclusive } }, select: { status: true, grandTotal: true, payments: { select: paymentSelect } } }) : [],
-    privileged ? db.expense.findMany({ where: { expenseDate: { gte: currentStart, lt: today.endExclusive } }, select: { status: true, amount: true, category: true } }) : [],
+    shopOperationsViewer ? db.expense.findMany({ where: { expenseDate: { gte: currentStart, lt: today.endExclusive } }, select: { status: true, amount: true, category: true } }) : [],
     financialViewer ? db.invoice.findMany({ where: { ...invoiceScope, status: "FINALIZED", createdAt: cutoff ? { gte: cutoff } : undefined }, select: { status: true, grandTotal: true, payments: { select: paymentSelect } } }) : [],
     db.order.findMany({ where: activeOrderScope, select: { id: true, orderNumber: true, customerNameSnapshot: true, jobName: true, status: true, dueDate: true, assignedStaff: { select: { name: true } } }, orderBy: { updatedAt: "desc" }, take: 8 }),
     financialViewer ? db.invoice.findMany({ where: { ...invoiceScope, createdAt: cutoff ? { gte: cutoff } : undefined }, select: { id: true, invoiceNumber: true, customerNameSnapshot: true, grandTotal: true, status: true, createdAt: true, createdBy: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 6 }) : [],
-    financialViewer ? db.payment.findMany({ where: { ...(privileged ? {} : { recordedById: viewer.id }), createdAt: cutoff ? { gte: cutoff } : undefined, invoice: { status: "FINALIZED", createdAt: cutoff ? { gte: cutoff } : undefined }, reversal: null }, select: { id: true, amount: true, method: true, createdAt: true, recordedBy: { select: { name: true } }, invoice: { select: { id: true, invoiceNumber: true } } }, orderBy: { createdAt: "desc" }, take: 6 }) : [],
-    privileged ? db.expense.findMany({ where: { status: "FINALIZED", expenseDate: cutoff ? { gte: cutoff } : undefined }, select: { id: true, expenseNumber: true, description: true, amount: true, paymentMethod: true, expenseDate: true, createdBy: { select: { name: true } } }, orderBy: { expenseDate: "desc" }, take: 6 }) : [],
+    financialViewer ? db.payment.findMany({ where: { ...(shopOperationsViewer ? {} : { recordedById: viewer.id }), createdAt: cutoff ? { gte: cutoff } : undefined, invoice: { status: "FINALIZED", createdAt: cutoff ? { gte: cutoff } : undefined }, reversal: null }, select: { id: true, amount: true, method: true, createdAt: true, recordedBy: { select: { name: true } }, invoice: { select: { id: true, invoiceNumber: true } } }, orderBy: { createdAt: "desc" }, take: 6 }) : [],
+    shopOperationsViewer ? db.expense.findMany({ where: { status: "FINALIZED", expenseDate: cutoff ? { gte: cutoff } : undefined }, select: { id: true, expenseNumber: true, description: true, amount: true, paymentMethod: true, expenseDate: true, createdBy: { select: { name: true } } }, orderBy: { expenseDate: "desc" }, take: 6 }) : [],
     privileged ? db.cashMovement.findMany({ where: { createdAt: cutoff ? { gte: cutoff } : undefined }, select: { id: true, type: true, reason: true, amount: true, createdAt: true, createdBy: { select: { name: true } } }, orderBy: { createdAt: "desc" }, take: 6 }) : [],
     financialViewer ? db.invoice.findMany({ where: { ...invoiceScope, status: "FINALIZED", createdAt: { gte: effectiveOperationalStart(chartStart, cutoff) } }, select: { grandTotal: true, createdAt: true } }) : [],
     db.order.count({ where: { AND: [activeOrderScope, { status: { in: ["PENDING", "DESIGNING", "WAITING_APPROVAL", "APPROVED", "PRINTING", "FINISHING"] } }] } }),
@@ -78,7 +79,7 @@ export async function getDashboardData(viewer: Viewer, now = new Date()) {
   return {
     role: viewer.role,
     canViewFinancials: financialViewer,
-    canViewExpenses: privileged,
+    canViewExpenses: shopOperationsViewer,
     todaySales: formatReportMoney(sales.sales),
     todayExpenses: formatReportMoney(expenses.total),
     operationalNet: formatReportMoney(operationalNetIncome(sales.sales, expenses.total)),

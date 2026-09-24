@@ -19,7 +19,8 @@ const { db } = await import("../../src/lib/db");
 const { createInvoice, addInvoicePayment, getInvoiceById, voidInvoiceRecord, recordReceiptReprint } = await import("../../src/server/invoice-service");
 const { openCashSession } = await import("../../src/server/cash-register-service");
 const { invoiceInputSchema } = await import("../../src/lib/validations/invoice");
-const sql = new Client({ connectionString: process.env.DIRECT_URL });
+const directUrl = new URL(process.env.DIRECT_URL!); directUrl.searchParams.delete("sslmode");
+const sql = new Client({ connectionString: directUrl.toString(), ssl: process.env.SUPABASE_CA_CERT ? { ca: process.env.SUPABASE_CA_CERT, rejectUnauthorized: true } : undefined });
 let actorId: string;
 const run = randomUUID();
 const makeInput = (amount = "100.00") => invoiceInputSchema.parse({
