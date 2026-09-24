@@ -138,8 +138,26 @@ Automated HTTPS, ADMIN login/logout, secure-cookie, route, Settings, Reports CSV
 
 On 19 September 2026, the owner also reported all workflows operating correctly after go-live. The Production function region was then moved from Washington (`iad1`) to Mumbai (`bom1`) to reduce click-to-render latency without changing financial behavior or the printing boundary.
 
-## V1.0.1 Windows maintenance acceptance (pending Production deployment)
+## V1.0.1 Windows maintenance acceptance
 
-On the real touchscreen, ADMIN must sign in with username `stadmin`, verify the 48px login, Staff, and Danger Zone controls, and test “Keep me signed in on this device”: close/reopen the installed browser app to confirm persistence, then log out and confirm login is required. ADMIN must create one temporary STAFF account, sign in as STAFF, confirm daily POS/Orders/Quotations/Expenses/Cash Register/Reports access and denial of Staff administration, Settings, Restore, and Start Fresh, then sign back in as ADMIN and disable the test account. Disabled login must fail and the test account must not remain active.
+The owner confirmed the V1.0.1 maintenance workflow passed on 24–25 September 2026 using the same real Startek Print Hub Windows touch POS, current Chrome/Edge browser-print path, installed XP-80T/XP-80C-compatible driver, USB-connected Xprinter XP-80T, and 80mm paper recorded above. Exact Windows, browser, display, driver, firmware, and queue versions were not supplied and therefore are not invented here.
 
-Start Fresh must be executed only after the fresh application ZIP/database dump, deployed Production, ADMIN/STAFF tests, closed-register check, and XP-80T regression all pass. Re-run a normal and REPRINT XP-80T receipt, long description, cash tender/change, logo, automatic/manual print dialog, cancelled-dialog safety, and confirm no QR or QZ Tray dependency. Record metadata and PASS/FAIL here only after the owner performs these Production checks.
+| V1.0.1 Production maintenance check | Result |
+| --- | --- |
+| Username login as `stadmin` | PASS |
+| 48px touch login, Staff, and Danger Zone controls | PASS |
+| Keep-signed-in and explicit logout workflow | PASS |
+| ADMIN/STAFF permissions and denied administration paths | PASS |
+| Staff disable and disabled-login rejection | PASS |
+| Normal and REPRINT 80mm receipt | PASS |
+| Long description, cash tender/change, and logo | PASS |
+| Automatic/manual browser print and cancelled-dialog safety | PASS |
+| No receipt QR, QZ Tray, raw USB, or ESC/POS dependency | PASS |
+| Windows touchscreen workflow | PASS |
+| XP-80T physical regression | PASS |
+| Stable Production POS shortcut and automatic startup | PASS |
+| Owner-controlled Start Fresh after verified backups | PASS |
+| Archived history retained and excluded from normal operations | PASS |
+| ADMIN password reset audit and closed register | PASS |
+
+Start Fresh was not automated. The owner performed it only after Production deployment, backup verification, the closed-register precondition, authenticated role checks, and physical printing acceptance. Read-only database verification confirmed the cutoff/audit and retained rows afterward.
